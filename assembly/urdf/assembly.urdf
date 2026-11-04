@@ -1,0 +1,901 @@
+<?xml version="1.0"?>
+<robot name="assembly">
+  <link name="base">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo___horn_13.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="base_servo___horn_13_material">
+        <color rgba="0.7 0.7 0.7 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo___horn_13.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo_holder_half_2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="base_servo_holder_half_2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo_holder_half_2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo___horn_14.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="base_servo___horn_14_material">
+        <color rgba="0.7 0.7 0.7 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo___horn_14.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo_holder_half_3.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="base_servo_holder_half_3_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo_holder_half_3.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo___horn_15.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="base_servo___horn_15_material">
+        <color rgba="0.7 0.7 0.7 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo___horn_15.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo_holder_half_4.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="base_servo_holder_half_4_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo_holder_half_4.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo___horn_16.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="base_servo___horn_16_material">
+        <color rgba="0.7 0.7 0.7 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo___horn_16.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo_holder_half_5.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="base_servo_holder_half_5_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_servo_holder_half_5.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_body_4.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="base_body_4_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/base_body_4.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0 0.0876855986 0.0306731448" rpy="0 0 0"/>
+      <mass value="1.9627255"/>
+      <inertia ixx="0.00501940803" ixy="4.77839664e-11" ixz="0" iyy="0.00576531443" iyz="-0.000169730172" izz="0.00924168754"/>
+    </inertial>
+  </link>
+  <link name="coxa_3">
+    <visual>
+      <origin xyz="-0.0747848986 -0.135263588 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/coxa_3_servo___horn_17.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="coxa_3_servo___horn_17_material">
+        <color rgba="0.7 0.7 0.7 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0747848986 -0.135263588 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/coxa_3_servo___horn_17.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.0747848986 -0.135263588 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/coxa_3_coxa_bottom_servo_6.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="coxa_3_coxa_bottom_servo_6_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0747848986 -0.135263588 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/coxa_3_coxa_bottom_servo_6.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="-0.00070978795 -0.00150619642 -0.0138117522" rpy="0 0 0"/>
+      <mass value="0.333795774"/>
+      <inertia ixx="6.00213181e-05" ixy="2.06948649e-06" ixz="-8.00392891e-07" iyy="7.69621487e-05" iyz="1.19796584e-06" izz="0.000105128244"/>
+    </inertial>
+  </link>
+  <link name="Rigid_Group_22">
+    <visual>
+      <origin xyz="-0.0747848986 -0.0472635884 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_22_coxa_bottom_servo_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_22_coxa_bottom_servo_1_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0747848986 -0.0472635884 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_22_coxa_bottom_servo_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.0747848986 -0.0472635884 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_22_servo___horn_12.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_22_servo___horn_12_material">
+        <color rgba="0.7 0.7 0.7 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0747848986 -0.0472635884 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_22_servo___horn_12.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="-0.00070978795 -0.00150619642 -0.0138117522" rpy="0 0 0"/>
+      <mass value="0.333795774"/>
+      <inertia ixx="6.00213181e-05" ixy="2.06948649e-06" ixz="-8.00392891e-07" iyy="7.69621487e-05" iyz="1.19796584e-06" izz="0.000105128244"/>
+    </inertial>
+  </link>
+  <link name="Rigid_Group_28">
+    <visual>
+      <origin xyz="0.0747848986 -0.0472635884 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_28_coxa_bottom_servo_mirror___1__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_28_coxa_bottom_servo_mirror___1__1_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0747848986 -0.0472635884 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_28_coxa_bottom_servo_mirror___1__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.0747848986 -0.0472635884 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_28_servo___horn_18.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_28_servo___horn_18_material">
+        <color rgba="0.7 0.7 0.7 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0747848986 -0.0472635884 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_28_servo___horn_18.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.00070978795 -0.00150619642 -0.0138117514" rpy="0 0 0"/>
+      <mass value="0.333795774"/>
+      <inertia ixx="6.00213172e-05" ixy="-2.06948649e-06" ixz="8.00396098e-07" iyy="7.69621479e-05" iyz="1.19796121e-06" izz="0.000105128244"/>
+    </inertial>
+  </link>
+  <link name="Rigid_Group_34">
+    <visual>
+      <origin xyz="0.0747848986 -0.135263588 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_34_coxa_bottom_servo_mirror___1__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_34_coxa_bottom_servo_mirror___1__2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0747848986 -0.135263588 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_34_coxa_bottom_servo_mirror___1__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.0747848986 -0.135263588 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_34_servo___horn_19.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_34_servo___horn_19_material">
+        <color rgba="0.7 0.7 0.7 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0747848986 -0.135263588 -0.0195" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_34_servo___horn_19.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.00070978795 -0.00150619642 -0.0138117514" rpy="0 0 0"/>
+      <mass value="0.333795774"/>
+      <inertia ixx="6.00213172e-05" ixy="-2.06948649e-06" ixz="8.00396098e-07" iyy="7.69621479e-05" iyz="1.19796121e-06" izz="0.000105128244"/>
+    </inertial>
+  </link>
+  <link name="Rigid_Group_18">
+    <visual>
+      <origin xyz="-0.0827848986 -0.161763588 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_18_femur__1__3.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_18_femur__1__3_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0827848986 -0.161763588 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_18_femur__1__3.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.0827848986 -0.161763588 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_18_femur_tibia_joint_11.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_18_femur_tibia_joint_11_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0827848986 -0.161763588 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_18_femur_tibia_joint_11.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.0827848986 -0.161763588 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_18_coxa_bottom_hinge_bottom_5.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_18_coxa_bottom_hinge_bottom_5_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0827848986 -0.161763588 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_18_coxa_bottom_hinge_bottom_5.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.0827848986 -0.161763588 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_18_coxa_bottom_hinge_top_5.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_18_coxa_bottom_hinge_top_5_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0827848986 -0.161763588 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_18_coxa_bottom_hinge_top_5.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.0852804345 -0.0278467344 1.87658019e-09" rpy="0 0 0"/>
+      <mass value="0.576847989"/>
+      <inertia ixx="0.000109700536" ixy="1.8982227e-05" ixz="1.21430177e-11" iyy="0.000885761946" iyz="0" izz="0.000940029923"/>
+    </inertial>
+  </link>
+  <link name="Rigid_Group_24">
+    <visual>
+      <origin xyz="-0.0827848986 -0.0737635884 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_24_coxa_bottom_hinge_top_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_24_coxa_bottom_hinge_top_1_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0827848986 -0.0737635884 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_24_coxa_bottom_hinge_top_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.0827848986 -0.0737635884 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_24_coxa_bottom_hinge_bottom_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_24_coxa_bottom_hinge_bottom_1_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0827848986 -0.0737635884 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_24_coxa_bottom_hinge_bottom_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.0827848986 -0.0737635884 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_24_femur_tibia_joint_6.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_24_femur_tibia_joint_6_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0827848986 -0.0737635884 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_24_femur_tibia_joint_6.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.0827848986 -0.0737635884 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_24_femur__1__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_24_femur__1__2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0827848986 -0.0737635884 -0.004" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_24_femur__1__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.0852804345 -0.0278467344 1.87658034e-09" rpy="0 0 0"/>
+      <mass value="0.576847989"/>
+      <inertia ixx="0.000109700536" ixy="1.8982227e-05" ixz="1.21430221e-11" iyy="0.000885761946" iyz="0" izz="0.000940029923"/>
+    </inertial>
+  </link>
+  <link name="Rigid_Group_29">
+    <visual>
+      <origin xyz="0.0827848986 -0.0737635884 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_29_coxa_bottom_hinge_bottom_mirror___1__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_29_coxa_bottom_hinge_bottom_mirror___1__1_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0827848986 -0.0737635884 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_29_coxa_bottom_hinge_bottom_mirror___1__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.0827848986 -0.0737635884 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_29_coxa_bottom_hinge_top_mirror___1__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_29_coxa_bottom_hinge_top_mirror___1__1_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0827848986 -0.0737635884 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_29_coxa_bottom_hinge_top_mirror___1__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.0827848986 -0.0737635884 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_29_femur__1__mirror__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_29_femur__1__mirror__1_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0827848986 -0.0737635884 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_29_femur__1__mirror__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.0827848986 -0.0737635884 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_29_femur_tibia_joint_13.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_29_femur_tibia_joint_13_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0827848986 -0.0737635884 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_29_femur_tibia_joint_13.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="-0.0852805124 -0.0278467281 5.63423196e-09" rpy="0 0 0"/>
+      <mass value="0.576845067"/>
+      <inertia ixx="0.000109700565" ixy="-1.89824972e-05" ixz="-1.67648745e-10" iyy="0.000885759927" iyz="-6.57454664e-12" izz="0.000940027978"/>
+    </inertial>
+  </link>
+  <link name="Rigid_Group_35">
+    <visual>
+      <origin xyz="0.0827848986 -0.161763588 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_35_coxa_bottom_hinge_bottom_mirror___1__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_35_coxa_bottom_hinge_bottom_mirror___1__2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0827848986 -0.161763588 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_35_coxa_bottom_hinge_bottom_mirror___1__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.0827848986 -0.161763588 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_35_coxa_bottom_hinge_top_mirror___1__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_35_coxa_bottom_hinge_top_mirror___1__2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0827848986 -0.161763588 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_35_coxa_bottom_hinge_top_mirror___1__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.0827848986 -0.161763588 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_35_femur__1__mirror__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_35_femur__1__mirror__2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0827848986 -0.161763588 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_35_femur__1__mirror__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.0827848986 -0.161763588 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_35_femur_tibia_joint_12.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_35_femur_tibia_joint_12_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0827848986 -0.161763588 -0.00399999958" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_35_femur_tibia_joint_12.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="-0.0852805124 -0.0278467281 5.63423085e-09" rpy="0 0 0"/>
+      <mass value="0.576845067"/>
+      <inertia ixx="0.000109700565" ixy="-1.89824972e-05" ixz="-1.67648776e-10" iyy="0.000885759927" iyz="-6.57454562e-12" izz="0.000940027978"/>
+    </inertial>
+  </link>
+  <link name="Rigid_Group_20">
+    <visual>
+      <origin xyz="-0.205484899 -0.161013588 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_20_ankle_3.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_20_ankle_3_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.205484899 -0.161013588 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_20_ankle_3.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.205484899 -0.161013588 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_20_tibia_hinge_top_6.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_20_tibia_hinge_top_6_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.205484899 -0.161013588 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_20_tibia_hinge_top_6.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.205484899 -0.161013588 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_20_tibia_hinge_bottom_6.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_20_tibia_hinge_bottom_6_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.205484899 -0.161013588 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_20_tibia_hinge_bottom_6.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.205484899 -0.161013588 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_20_tiba_shaft_6.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_20_tiba_shaft_6_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.205484899 -0.161013588 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_20_tiba_shaft_6.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.118035685 -0.0258840365 -0.00248811527" rpy="0 0 0"/>
+      <mass value="0.649246758"/>
+      <inertia ixx="0.000108858387" ixy="-1.01920206e-05" ixz="0.000103745277" iyy="0.00222682837" iyz="2.16513281e-07" izz="0.00223378243"/>
+    </inertial>
+  </link>
+  <link name="Rigid_Group_26">
+    <visual>
+      <origin xyz="-0.205484899 -0.0730135884 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_26_tiba_shaft_2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_26_tiba_shaft_2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.205484899 -0.0730135884 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_26_tiba_shaft_2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.205484899 -0.0730135884 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_26_tibia_hinge_bottom_2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_26_tibia_hinge_bottom_2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.205484899 -0.0730135884 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_26_tibia_hinge_bottom_2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.205484899 -0.0730135884 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_26_tibia_hinge_top_2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_26_tibia_hinge_top_2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.205484899 -0.0730135884 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_26_tibia_hinge_top_2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.205484899 -0.0730135884 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_26_ankle_2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_26_ankle_2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.205484899 -0.0730135884 -0.00399999979" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_26_ankle_2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.118035685 -0.0258840365 -0.00248811527" rpy="0 0 0"/>
+      <mass value="0.649246758"/>
+      <inertia ixx="0.000108858387" ixy="-1.01920206e-05" ixz="0.000103745277" iyy="0.00222682837" iyz="2.16513281e-07" izz="0.00223378243"/>
+    </inertial>
+  </link>
+  <link name="Rigid_Group_30">
+    <visual>
+      <origin xyz="0.205484899 -0.0730135884 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_30_tiba_shaft_mirror__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_30_tiba_shaft_mirror__1_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.205484899 -0.0730135884 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_30_tiba_shaft_mirror__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.205484899 -0.0730135884 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_30_tibia_hinge_bottom_mirror__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_30_tibia_hinge_bottom_mirror__1_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.205484899 -0.0730135884 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_30_tibia_hinge_bottom_mirror__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.205484899 -0.0730135884 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_30_tibia_hinge_top_mirror__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_30_tibia_hinge_top_mirror__1_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.205484899 -0.0730135884 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_30_tibia_hinge_top_mirror__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.205484899 -0.0730135884 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_30_ankle_mirror__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_30_ankle_mirror__1_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.205484899 -0.0730135884 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_30_ankle_mirror__1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="-0.118035334 -0.0258840189 -0.00248816158" rpy="0 0 0"/>
+      <mass value="0.649248829"/>
+      <inertia ixx="0.000108858281" ixy="1.01924814e-05" ixz="-0.00010374674" iyy="0.00222684078" iyz="2.16384832e-07" izz="0.00223379479"/>
+    </inertial>
+  </link>
+  <link name="Rigid_Group_36">
+    <visual>
+      <origin xyz="0.205484899 -0.161013588 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_36_tiba_shaft_mirror__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_36_tiba_shaft_mirror__2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.205484899 -0.161013588 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_36_tiba_shaft_mirror__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.205484899 -0.161013588 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_36_tibia_hinge_bottom_mirror__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_36_tibia_hinge_bottom_mirror__2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.205484899 -0.161013588 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_36_tibia_hinge_bottom_mirror__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.205484899 -0.161013588 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_36_tibia_hinge_top_mirror__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_36_tibia_hinge_top_mirror__2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.205484899 -0.161013588 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_36_tibia_hinge_top_mirror__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.205484899 -0.161013588 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_36_ankle_mirror__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="rigid_group_36_ankle_mirror__2_material">
+        <color rgba="0.62745098 0.62745098 0.62745098 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.205484899 -0.161013588 -0.00399999937" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/rigid_group_36_ankle_mirror__2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="-0.118035334 -0.0258840189 -0.00248816158" rpy="0 0 0"/>
+      <mass value="0.649248829"/>
+      <inertia ixx="0.000108858281" ixy="1.01924814e-05" ixz="-0.00010374674" iyy="0.00222684078" iyz="2.16384832e-07" izz="0.00223379479"/>
+    </inertial>
+  </link>
+  <joint name="Revolute_17" type="continuous">
+    <origin xyz="0.0747848986 0.135263588 0.0195" rpy="0 0 0"/>
+    <parent link="base"/>
+    <child link="coxa_3"/>
+    <axis xyz="0 0 -1"/>
+  </joint>
+  <joint name="Revolute_23" type="continuous">
+    <origin xyz="0.0747848986 0.0472635884 0.0195" rpy="0 0 0"/>
+    <parent link="base"/>
+    <child link="Rigid_Group_22"/>
+    <axis xyz="0 0 -1"/>
+  </joint>
+  <joint name="Revolute_33" type="continuous">
+    <origin xyz="-0.0747848986 0.0472635884 0.0195" rpy="0 0 0"/>
+    <parent link="base"/>
+    <child link="Rigid_Group_28"/>
+    <axis xyz="0 0 -1"/>
+  </joint>
+  <joint name="Revolute_39" type="continuous">
+    <origin xyz="-0.0747848986 0.135263588 0.0195" rpy="0 0 0"/>
+    <parent link="base"/>
+    <child link="Rigid_Group_34"/>
+    <axis xyz="0 0 -1"/>
+  </joint>
+  <joint name="Revolute_19" type="continuous">
+    <origin xyz="0.008 0.0265 -0.0155" rpy="0 0 0"/>
+    <parent link="coxa_3"/>
+    <child link="Rigid_Group_18"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <joint name="Revolute_25" type="continuous">
+    <origin xyz="0.008 0.0265 -0.0155" rpy="0 0 0"/>
+    <parent link="Rigid_Group_22"/>
+    <child link="Rigid_Group_24"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <joint name="Revolute_31" type="continuous">
+    <origin xyz="-0.008 0.0265 -0.0155000004" rpy="0 0 0"/>
+    <parent link="Rigid_Group_28"/>
+    <child link="Rigid_Group_29"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <joint name="Revolute_37" type="continuous">
+    <origin xyz="-0.008 0.0265 -0.0155000004" rpy="0 0 0"/>
+    <parent link="Rigid_Group_34"/>
+    <child link="Rigid_Group_35"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <joint name="Revolute_21" type="continuous">
+    <origin xyz="0.1227 -0.00075 -2.11135049e-10" rpy="0 0 0"/>
+    <parent link="Rigid_Group_18"/>
+    <child link="Rigid_Group_20"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <joint name="Revolute_27" type="continuous">
+    <origin xyz="0.1227 -0.00075 -2.11135153e-10" rpy="0 0 0"/>
+    <parent link="Rigid_Group_24"/>
+    <child link="Rigid_Group_26"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <joint name="Revolute_32" type="continuous">
+    <origin xyz="-0.1227 -0.00075 -2.11122531e-10" rpy="0 0 0"/>
+    <parent link="Rigid_Group_29"/>
+    <child link="Rigid_Group_30"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <joint name="Revolute_38" type="continuous">
+    <origin xyz="-0.1227 -0.00075 -2.11125788e-10" rpy="0 0 0"/>
+    <parent link="Rigid_Group_35"/>
+    <child link="Rigid_Group_36"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+</robot>

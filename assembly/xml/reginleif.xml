@@ -1,0 +1,155 @@
+<mujoco model="assembly">
+  <compiler angle="radian"/>
+
+  <asset>
+    <mesh name="base_servo___horn_13" content_type="model/stl" file="../meshes/base_servo___horn_13.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="base_servo_holder_half_2" content_type="model/stl" file="../meshes/base_servo_holder_half_2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="base_servo___horn_14" content_type="model/stl" file="../meshes/base_servo___horn_14.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="base_servo_holder_half_3" content_type="model/stl" file="../meshes/base_servo_holder_half_3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="base_servo___horn_15" content_type="model/stl" file="../meshes/base_servo___horn_15.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="base_servo_holder_half_4" content_type="model/stl" file="../meshes/base_servo_holder_half_4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="base_servo___horn_16" content_type="model/stl" file="../meshes/base_servo___horn_16.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="base_servo_holder_half_5" content_type="model/stl" file="../meshes/base_servo_holder_half_5.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="base_body_4" content_type="model/stl" file="../meshes/base_body_4.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="coxa_3_servo___horn_17" content_type="model/stl" file="../meshes/coxa_3_servo___horn_17.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="coxa_3_coxa_bottom_servo_6" content_type="model/stl" file="../meshes/coxa_3_coxa_bottom_servo_6.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_22_coxa_bottom_servo_1" content_type="model/stl" file="../meshes/rigid_group_22_coxa_bottom_servo_1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_22_servo___horn_12" content_type="model/stl" file="../meshes/rigid_group_22_servo___horn_12.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_28_coxa_bottom_servo_mirror___1__1" content_type="model/stl" file="../meshes/rigid_group_28_coxa_bottom_servo_mirror___1__1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_28_servo___horn_18" content_type="model/stl" file="../meshes/rigid_group_28_servo___horn_18.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_34_coxa_bottom_servo_mirror___1__2" content_type="model/stl" file="../meshes/rigid_group_34_coxa_bottom_servo_mirror___1__2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_34_servo___horn_19" content_type="model/stl" file="../meshes/rigid_group_34_servo___horn_19.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_18_femur__1__3" content_type="model/stl" file="../meshes/rigid_group_18_femur__1__3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_18_femur_tibia_joint_11" content_type="model/stl" file="../meshes/rigid_group_18_femur_tibia_joint_11.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_18_coxa_bottom_hinge_bottom_5" content_type="model/stl" file="../meshes/rigid_group_18_coxa_bottom_hinge_bottom_5.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_18_coxa_bottom_hinge_top_5" content_type="model/stl" file="../meshes/rigid_group_18_coxa_bottom_hinge_top_5.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_24_coxa_bottom_hinge_top_1" content_type="model/stl" file="../meshes/rigid_group_24_coxa_bottom_hinge_top_1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_24_coxa_bottom_hinge_bottom_1" content_type="model/stl" file="../meshes/rigid_group_24_coxa_bottom_hinge_bottom_1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_24_femur_tibia_joint_6" content_type="model/stl" file="../meshes/rigid_group_24_femur_tibia_joint_6.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_24_femur__1__2" content_type="model/stl" file="../meshes/rigid_group_24_femur__1__2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_29_coxa_bottom_hinge_bottom_mirror___1__1" content_type="model/stl" file="../meshes/rigid_group_29_coxa_bottom_hinge_bottom_mirror___1__1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_29_coxa_bottom_hinge_top_mirror___1__1" content_type="model/stl" file="../meshes/rigid_group_29_coxa_bottom_hinge_top_mirror___1__1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_29_femur__1__mirror__1" content_type="model/stl" file="../meshes/rigid_group_29_femur__1__mirror__1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_29_femur_tibia_joint_13" content_type="model/stl" file="../meshes/rigid_group_29_femur_tibia_joint_13.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_35_coxa_bottom_hinge_bottom_mirror___1__2" content_type="model/stl" file="../meshes/rigid_group_35_coxa_bottom_hinge_bottom_mirror___1__2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_35_coxa_bottom_hinge_top_mirror___1__2" content_type="model/stl" file="../meshes/rigid_group_35_coxa_bottom_hinge_top_mirror___1__2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_35_femur__1__mirror__2" content_type="model/stl" file="../meshes/rigid_group_35_femur__1__mirror__2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_35_femur_tibia_joint_12" content_type="model/stl" file="../meshes/rigid_group_35_femur_tibia_joint_12.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_20_ankle_3" content_type="model/stl" file="../meshes/rigid_group_20_ankle_3.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_20_tibia_hinge_top_6" content_type="model/stl" file="../meshes/rigid_group_20_tibia_hinge_top_6.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_20_tibia_hinge_bottom_6" content_type="model/stl" file="../meshes/rigid_group_20_tibia_hinge_bottom_6.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_20_tiba_shaft_6" content_type="model/stl" file="../meshes/rigid_group_20_tiba_shaft_6.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_26_tiba_shaft_2" content_type="model/stl" file="../meshes/rigid_group_26_tiba_shaft_2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_26_tibia_hinge_bottom_2" content_type="model/stl" file="../meshes/rigid_group_26_tibia_hinge_bottom_2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_26_tibia_hinge_top_2" content_type="model/stl" file="../meshes/rigid_group_26_tibia_hinge_top_2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_26_ankle_2" content_type="model/stl" file="../meshes/rigid_group_26_ankle_2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_30_tiba_shaft_mirror__1" content_type="model/stl" file="../meshes/rigid_group_30_tiba_shaft_mirror__1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_30_tibia_hinge_bottom_mirror__1" content_type="model/stl" file="../meshes/rigid_group_30_tibia_hinge_bottom_mirror__1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_30_tibia_hinge_top_mirror__1" content_type="model/stl" file="../meshes/rigid_group_30_tibia_hinge_top_mirror__1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_30_ankle_mirror__1" content_type="model/stl" file="../meshes/rigid_group_30_ankle_mirror__1.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_36_tiba_shaft_mirror__2" content_type="model/stl" file="../meshes/rigid_group_36_tiba_shaft_mirror__2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_36_tibia_hinge_bottom_mirror__2" content_type="model/stl" file="../meshes/rigid_group_36_tibia_hinge_bottom_mirror__2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_36_tibia_hinge_top_mirror__2" content_type="model/stl" file="../meshes/rigid_group_36_tibia_hinge_top_mirror__2.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="rigid_group_36_ankle_mirror__2" content_type="model/stl" file="../meshes/rigid_group_36_ankle_mirror__2.stl" scale="0.001 0.001 0.001"/>
+  </asset>
+
+  <worldbody>
+    <geom quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="base_servo___horn_13"/>
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="base_servo_holder_half_2"/>
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="base_servo___horn_14"/>
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="base_servo_holder_half_3"/>
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="base_servo___horn_15"/>
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="base_servo_holder_half_4"/>
+    <geom quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="base_servo___horn_16"/>
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="base_servo_holder_half_5"/>
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="base_body_4"/>
+    <body name="coxa_3" pos="0.0747849 0.135264 0.0195">
+      <inertial pos="-0.000709788 -0.0015062 -0.0138118" quat="0.0571414 0.699163 -0.0287077 0.712097" mass="0.333796" diaginertia="0.00010519 7.71686e-05 5.97528e-05"/>
+      <joint name="Revolute_17" axis="0 0 -1"/>
+      <geom pos="-0.0747849 -0.135264 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="coxa_3_servo___horn_17"/>
+      <geom pos="-0.0747849 -0.135264 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="coxa_3_coxa_bottom_servo_6"/>
+      <body name="Rigid_Group_18" pos="0.008 0.0265 -0.0155">
+        <inertial pos="0.0852804 -0.0278467 1.87658e-09" quat="0.00864071 0.707054 -0.0086407 0.707054" mass="0.576848" diaginertia="0.00094003 0.000886226 0.000109237"/>
+        <joint name="Revolute_19" axis="0 1 0"/>
+        <geom pos="-0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_18_femur__1__3"/>
+        <geom pos="-0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_18_femur_tibia_joint_11"/>
+        <geom pos="-0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_18_coxa_bottom_hinge_bottom_5"/>
+        <geom pos="-0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_18_coxa_bottom_hinge_top_5"/>
+        <body name="Rigid_Group_20" pos="0.1227 -0.00075 -2.11135e-10">
+          <inertial pos="0.118036 -0.025884 -0.00248812" quat="-0.00979387 0.72407 -0.00680305 0.689623" mass="0.649247" diaginertia="0.00223884 0.00222687 0.000103756"/>
+          <joint name="Revolute_21" axis="0 1 0"/>
+          <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_20_ankle_3"/>
+          <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_20_tibia_hinge_top_6"/>
+          <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_20_tibia_hinge_bottom_6"/>
+          <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_20_tiba_shaft_6"/>
+        </body>
+      </body>
+    </body>
+    <body name="Rigid_Group_22" pos="0.0747849 0.0472636 0.0195">
+      <inertial pos="-0.000709788 -0.0015062 -0.0138118" quat="0.0571414 0.699163 -0.0287077 0.712097" mass="0.333796" diaginertia="0.00010519 7.71686e-05 5.97528e-05"/>
+      <joint name="Revolute_23" axis="0 0 -1"/>
+      <geom pos="-0.0747849 -0.0472636 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_22_coxa_bottom_servo_1"/>
+      <geom pos="-0.0747849 -0.0472636 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="rigid_group_22_servo___horn_12"/>
+      <body name="Rigid_Group_24" pos="0.008 0.0265 -0.0155">
+        <inertial pos="0.0852804 -0.0278467 1.87658e-09" quat="0.00864071 0.707054 -0.0086407 0.707054" mass="0.576848" diaginertia="0.00094003 0.000886226 0.000109237"/>
+        <joint name="Revolute_25" axis="0 1 0"/>
+        <geom pos="-0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_24_coxa_bottom_hinge_top_1"/>
+        <geom pos="-0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_24_coxa_bottom_hinge_bottom_1"/>
+        <geom pos="-0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_24_femur_tibia_joint_6"/>
+        <geom pos="-0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_24_femur__1__2"/>
+        <body name="Rigid_Group_26" pos="0.1227 -0.00075 -2.11135e-10">
+          <inertial pos="0.118036 -0.025884 -0.00248812" quat="-0.00979387 0.72407 -0.00680305 0.689623" mass="0.649247" diaginertia="0.00223884 0.00222687 0.000103756"/>
+          <joint name="Revolute_27" axis="0 1 0"/>
+          <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_26_tiba_shaft_2"/>
+          <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_26_tibia_hinge_bottom_2"/>
+          <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_26_tibia_hinge_top_2"/>
+          <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_26_ankle_2"/>
+        </body>
+      </body>
+    </body>
+    <body name="Rigid_Group_28" pos="-0.0747849 0.0472636 0.0195">
+      <inertial pos="0.000709788 -0.0015062 -0.0138118" quat="-0.0287077 0.712097 0.0571414 0.699162" mass="0.333796" diaginertia="0.00010519 7.71686e-05 5.97528e-05"/>
+      <joint name="Revolute_33" axis="0 0 -1"/>
+      <geom pos="0.0747849 -0.0472636 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_28_coxa_bottom_servo_mirror___1__1"/>
+      <geom pos="0.0747849 -0.0472636 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="rigid_group_28_servo___horn_18"/>
+      <body name="Rigid_Group_29" pos="-0.008 0.0265 -0.0155">
+        <inertial pos="-0.0852805 -0.0278467 5.63423e-09" quat="-0.00864087 0.707054 0.00864083 0.707054" mass="0.576845" diaginertia="0.000940028 0.000886224 0.000109237"/>
+        <joint name="Revolute_31" axis="0 1 0"/>
+        <geom pos="0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_29_coxa_bottom_hinge_bottom_mirror___1__1"/>
+        <geom pos="0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_29_coxa_bottom_hinge_top_mirror___1__1"/>
+        <geom pos="0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_29_femur__1__mirror__1"/>
+        <geom pos="0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_29_femur_tibia_joint_13"/>
+        <body name="Rigid_Group_30" pos="-0.1227 -0.00075 -2.11123e-10">
+          <inertial pos="-0.118035 -0.025884 -0.00248816" quat="-0.00680763 0.689623 -0.00979835 0.72407" mass="0.649249" diaginertia="0.00223885 0.00222688 0.000103756"/>
+          <joint name="Revolute_32" axis="0 1 0"/>
+          <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_30_tiba_shaft_mirror__1"/>
+          <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_30_tibia_hinge_bottom_mirror__1"/>
+          <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_30_tibia_hinge_top_mirror__1"/>
+          <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_30_ankle_mirror__1"/>
+        </body>
+      </body>
+    </body>
+    <body name="Rigid_Group_34" pos="-0.0747849 0.135264 0.0195">
+      <inertial pos="0.000709788 -0.0015062 -0.0138118" quat="-0.0287077 0.712097 0.0571414 0.699162" mass="0.333796" diaginertia="0.00010519 7.71686e-05 5.97528e-05"/>
+      <joint name="Revolute_39" axis="0 0 -1"/>
+      <geom pos="0.0747849 -0.135264 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_34_coxa_bottom_servo_mirror___1__2"/>
+      <geom pos="0.0747849 -0.135264 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="rigid_group_34_servo___horn_19"/>
+      <body name="Rigid_Group_35" pos="-0.008 0.0265 -0.0155">
+        <inertial pos="-0.0852805 -0.0278467 5.63423e-09" quat="-0.00864087 0.707054 0.00864083 0.707054" mass="0.576845" diaginertia="0.000940028 0.000886224 0.000109237"/>
+        <joint name="Revolute_37" axis="0 1 0"/>
+        <geom pos="0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_35_coxa_bottom_hinge_bottom_mirror___1__2"/>
+        <geom pos="0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_35_coxa_bottom_hinge_top_mirror___1__2"/>
+        <geom pos="0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_35_femur__1__mirror__2"/>
+        <geom pos="0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_35_femur_tibia_joint_12"/>
+        <body name="Rigid_Group_36" pos="-0.1227 -0.00075 -2.11126e-10">
+          <inertial pos="-0.118035 -0.025884 -0.00248816" quat="-0.00680763 0.689623 -0.00979835 0.72407" mass="0.649249" diaginertia="0.00223885 0.00222688 0.000103756"/>
+          <joint name="Revolute_38" axis="0 1 0"/>
+          <geom pos="0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_36_tiba_shaft_mirror__2"/>
+          <geom pos="0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_36_tibia_hinge_bottom_mirror__2"/>
+          <geom pos="0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_36_tibia_hinge_top_mirror__2"/>
+          <geom pos="0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="rigid_group_36_ankle_mirror__2"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
