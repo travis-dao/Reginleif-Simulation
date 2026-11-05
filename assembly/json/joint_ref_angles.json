@@ -1,0 +1,14 @@
+{
+  "leg2_coxa": 90.0,
+  "leg2_femur": 90.0,
+  "leg2_tibia": 180.0,
+  "leg1_coxa": 90.0,
+  "leg1_femur": 90.0,
+  "leg1_tibia": 180.0,
+  "leg3_coxa": 90.0,
+  "leg3_femur": 90.0,
+  "leg3_tibia": 0.0,
+  "leg0_coxa": 90.0,
+  "leg0_femur": 90.0,
+  "leg0_tibia": 0.0
+}

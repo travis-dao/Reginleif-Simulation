@@ -1,9 +1,17 @@
 # mjpython python/main.py
 
 import time
+import numpy as np
 import mujoco
 import mujoco.viewer
-import numpy as np
+import xml.etree.ElementTree as ET
+
+SRC = "assembly/xml/reginleif.xml"        # your original file
+DST = "assembly/xml/reginleif_sim.xml"     # must be saved in the same folder as SRC
+
+KP = 30.0                   # servo stiffness (tune)
+FORCE = 9.4                 # max joint torque in N*m (set to your servo spec)
+START_HEIGHT = 0.5         # drop height of the base, adjust to your geometry
 
 '''
 foot_neutral_offset_mag = { 120.0f, 120.0f, -40.0f }
@@ -31,11 +39,51 @@ joint_angles = {
     "leg3_tibia": 0.0,
 }
 
-model = mujoco.MjModel.from_xml_path("assembly/xml/reginleif.xml")
-data = mujoco.MjData(model)
+# ---------- build the simulation XML ----------
+tree = ET.parse(SRC)
+root = tree.getroot()
 
-# Update derived quantities
-mujoco.mj_forward(model, data)
+ET.SubElement(root, "option", timestep="0.002")
+
+wb = root.find("worldbody")
+base = ET.Element("body", name="base", pos=f"0 0 {START_HEIGHT}")
+ET.SubElement(base, "freejoint", name="root")
+for child in list(wb):          # move all base geoms and leg bodies under "base"
+    wb.remove(child)
+    base.append(child)
+wb.append(base)
+
+# collisions: disable all mesh geoms, then enable only the ankles + floor
+for g in base.iter("geom"):
+    g.set("contype", "0")
+    g.set("conaffinity", "0")
+    if "ankle" in g.get("mesh", ""):
+        g.set("contype", "1")
+        g.set("conaffinity", "1")
+        g.set("friction", "1.5 0.005 0.0001")
+
+# Add this inside <asset> before the floor geom is created
+asset = root.find("asset")
+ET.SubElement(asset, "texture", name="grid", type="2d", builtin="checker",
+              rgb1="1 1 1", rgb2="0.9 0.9 0.9", width="300", height="300")
+ET.SubElement(asset, "material", name="floor_mat", texture="grid",
+              texrepeat="5 5", reflectance="0.1")
+
+ET.SubElement(wb, "geom", name="floor", type="plane", size="2 2 0.1",
+              contype="1", conaffinity="1", material="floor_mat")
+
+# joint damping + position actuators
+act = ET.SubElement(root, "actuator")
+for j in base.iter("joint"):
+    if j.get("name") == "root":
+        continue
+    j.set("damping", "0.5")
+    ET.SubElement(act, "position", name=j.get("name") + "_act", joint=j.get("name"), kp=str(KP), forcerange=f"-{FORCE} {FORCE}")
+
+tree.write(DST)
+
+model = mujoco.MjModel.from_xml_path(DST)
+data = mujoco.MjData(model)
 
 def init_joint_angles():
     joint_angles["leg0_coxa"] = np.deg2rad(135)
@@ -64,19 +112,24 @@ def set_joint_angles(model, data, angles, forward=True):
     if forward:
         mujoco.mj_forward(model, data)
 
+init_joint_angles()
+set_joint_angles(model, data, joint_angles)
+
+# hold that pose with the servos
+for name, ang in joint_angles.items():
+    aid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, name + "_act")
+    data.ctrl[aid] = ang
+
+# sanity check: servo-space angles in degrees
+for name in joint_angles:
+    jid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
+    print(name, np.rad2deg(data.qpos[model.jnt_qposadr[jid]]))
+
 with mujoco.viewer.launch_passive(model, data) as viewer:
     while viewer.is_running():
-
-        init_joint_angles()
-        set_joint_angles(model, data, joint_angles)
-
         step_start = time.time()
-
-        # data.ctrl[:] = 0.5  # Your controller goes here
-        # mujoco.mj_step(model, data)
-
+        mujoco.mj_step(model, data)
         viewer.sync()
-
         sleep = model.opt.timestep - (time.time() - step_start)
         if sleep > 0:
             time.sleep(sleep)

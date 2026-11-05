@@ -1,0 +1,155 @@
+<mujoco model="assembly">
+  <compiler angle="degree" />
+
+  <asset>
+    <mesh name="base_servo___horn_13" content_type="model/stl" file="../meshes/base_servo___horn_13.stl" scale="0.001 0.001 0.001" />
+    <mesh name="base_servo_holder_half_2" content_type="model/stl" file="../meshes/base_servo_holder_half_2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="base_servo___horn_14" content_type="model/stl" file="../meshes/base_servo___horn_14.stl" scale="0.001 0.001 0.001" />
+    <mesh name="base_servo_holder_half_3" content_type="model/stl" file="../meshes/base_servo_holder_half_3.stl" scale="0.001 0.001 0.001" />
+    <mesh name="base_servo___horn_15" content_type="model/stl" file="../meshes/base_servo___horn_15.stl" scale="0.001 0.001 0.001" />
+    <mesh name="base_servo_holder_half_4" content_type="model/stl" file="../meshes/base_servo_holder_half_4.stl" scale="0.001 0.001 0.001" />
+    <mesh name="base_servo___horn_16" content_type="model/stl" file="../meshes/base_servo___horn_16.stl" scale="0.001 0.001 0.001" />
+    <mesh name="base_servo_holder_half_5" content_type="model/stl" file="../meshes/base_servo_holder_half_5.stl" scale="0.001 0.001 0.001" />
+    <mesh name="base_body_4" content_type="model/stl" file="../meshes/base_body_4.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l2c_coxa_bottom_servo_mirror___1__2" content_type="model/stl" file="../meshes/l2c_coxa_bottom_servo_mirror___1__2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l2c_servo___horn_19" content_type="model/stl" file="../meshes/l2c_servo___horn_19.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l1c_coxa_bottom_servo_mirror___1__1" content_type="model/stl" file="../meshes/l1c_coxa_bottom_servo_mirror___1__1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l1c_servo___horn_18" content_type="model/stl" file="../meshes/l1c_servo___horn_18.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l3c_servo___horn_17" content_type="model/stl" file="../meshes/l3c_servo___horn_17.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l3c_coxa_bottom_servo_6" content_type="model/stl" file="../meshes/l3c_coxa_bottom_servo_6.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l0c_coxa_bottom_servo_1" content_type="model/stl" file="../meshes/l0c_coxa_bottom_servo_1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l0c_servo___horn_12" content_type="model/stl" file="../meshes/l0c_servo___horn_12.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l2f_coxa_bottom_hinge_bottom_mirror___1__2" content_type="model/stl" file="../meshes/l2f_coxa_bottom_hinge_bottom_mirror___1__2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l2f_coxa_bottom_hinge_top_mirror___1__2" content_type="model/stl" file="../meshes/l2f_coxa_bottom_hinge_top_mirror___1__2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l2f_femur__1__mirror__2" content_type="model/stl" file="../meshes/l2f_femur__1__mirror__2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l2f_femur_tibia_joint_13" content_type="model/stl" file="../meshes/l2f_femur_tibia_joint_13.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l1f_coxa_bottom_hinge_bottom_mirror___1__1" content_type="model/stl" file="../meshes/l1f_coxa_bottom_hinge_bottom_mirror___1__1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l1f_coxa_bottom_hinge_top_mirror___1__1" content_type="model/stl" file="../meshes/l1f_coxa_bottom_hinge_top_mirror___1__1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l1f_femur__1__mirror__1" content_type="model/stl" file="../meshes/l1f_femur__1__mirror__1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l1f_femur_tibia_joint_12" content_type="model/stl" file="../meshes/l1f_femur_tibia_joint_12.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l3f_femur__1__3" content_type="model/stl" file="../meshes/l3f_femur__1__3.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l3f_femur_tibia_joint_11" content_type="model/stl" file="../meshes/l3f_femur_tibia_joint_11.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l3f_coxa_bottom_hinge_bottom_5" content_type="model/stl" file="../meshes/l3f_coxa_bottom_hinge_bottom_5.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l3f_coxa_bottom_hinge_top_5" content_type="model/stl" file="../meshes/l3f_coxa_bottom_hinge_top_5.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l0f_coxa_bottom_hinge_top_1" content_type="model/stl" file="../meshes/l0f_coxa_bottom_hinge_top_1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l0f_coxa_bottom_hinge_bottom_1" content_type="model/stl" file="../meshes/l0f_coxa_bottom_hinge_bottom_1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l0f_femur_tibia_joint_6" content_type="model/stl" file="../meshes/l0f_femur_tibia_joint_6.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l0f_femur__1__2" content_type="model/stl" file="../meshes/l0f_femur__1__2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l2t_tiba_shaft_mirror__2" content_type="model/stl" file="../meshes/l2t_tiba_shaft_mirror__2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l2t_tibia_hinge_bottom_mirror__2" content_type="model/stl" file="../meshes/l2t_tibia_hinge_bottom_mirror__2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l2t_tibia_hinge_top_mirror__2" content_type="model/stl" file="../meshes/l2t_tibia_hinge_top_mirror__2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l2t_ankle_mirror__2" content_type="model/stl" file="../meshes/l2t_ankle_mirror__2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l1t_tiba_shaft_mirror__1" content_type="model/stl" file="../meshes/l1t_tiba_shaft_mirror__1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l1t_tibia_hinge_bottom_mirror__1" content_type="model/stl" file="../meshes/l1t_tibia_hinge_bottom_mirror__1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l1t_tibia_hinge_top_mirror__1" content_type="model/stl" file="../meshes/l1t_tibia_hinge_top_mirror__1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l1t_ankle_mirror__1" content_type="model/stl" file="../meshes/l1t_ankle_mirror__1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l3t_ankle_3" content_type="model/stl" file="../meshes/l3t_ankle_3.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l3t_tibia_hinge_top_6" content_type="model/stl" file="../meshes/l3t_tibia_hinge_top_6.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l3t_tibia_hinge_bottom_6" content_type="model/stl" file="../meshes/l3t_tibia_hinge_bottom_6.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l3t_tiba_shaft_6" content_type="model/stl" file="../meshes/l3t_tiba_shaft_6.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l0t_tiba_shaft_2" content_type="model/stl" file="../meshes/l0t_tiba_shaft_2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l0t_tibia_hinge_bottom_2" content_type="model/stl" file="../meshes/l0t_tibia_hinge_bottom_2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l0t_tibia_hinge_top_2" content_type="model/stl" file="../meshes/l0t_tibia_hinge_top_2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="l0t_ankle_2" content_type="model/stl" file="../meshes/l0t_ankle_2.stl" scale="0.001 0.001 0.001" />
+  <texture name="grid" type="2d" builtin="checker" rgb1="1 1 1" rgb2="0.9 0.9 0.9" width="300" height="300" /><material name="floor_mat" texture="grid" texrepeat="5 5" reflectance="0.1" /></asset>
+
+  <worldbody>
+    <body name="base" pos="0 0 0.5"><freejoint name="root" /><geom quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="base_servo___horn_13" contype="0" conaffinity="0" />
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="base_servo_holder_half_2" contype="0" conaffinity="0" />
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="base_servo___horn_14" contype="0" conaffinity="0" />
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="base_servo_holder_half_3" contype="0" conaffinity="0" />
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="base_servo___horn_15" contype="0" conaffinity="0" />
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="base_servo_holder_half_4" contype="0" conaffinity="0" />
+    <geom quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="base_servo___horn_16" contype="0" conaffinity="0" />
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="base_servo_holder_half_5" contype="0" conaffinity="0" />
+    <geom pos="0 0 0" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="base_body_4" contype="0" conaffinity="0" />
+    <body name="l2c" pos="-0.0677849 0.135264 0.0195">
+      <inertial pos="-0.0062905 -0.00150627 -0.0137124" quat="-0.0287061 0.712107 0.0571421 0.699152" mass="0.33378" diaginertia="0.00010519 7.7165e-05 5.97497e-05" />
+      <joint name="leg2_coxa" axis="0 0 -1" ref="90" damping="0.5" />
+      <geom pos="0.0677849 -0.135264 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2c_coxa_bottom_servo_mirror___1__2" contype="0" conaffinity="0" />
+      <geom pos="0.0677849 -0.135264 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="l2c_servo___horn_19" contype="0" conaffinity="0" />
+      <body name="l2f" pos="-0.015 0.0265 -0.0154">
+        <inertial pos="-0.0852805 -0.0278467 8.38854e-09" quat="-0.0086409 0.707054 0.00864085 0.707054" mass="0.576847" diaginertia="0.000940028 0.000886224 0.000109237" />
+        <joint name="leg2_femur" axis="0 1 0" ref="90" damping="0.5" />
+        <geom pos="0.0827849 -0.161764 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2f_coxa_bottom_hinge_bottom_mirror___1__2" contype="0" conaffinity="0" />
+        <geom pos="0.0827849 -0.161764 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2f_coxa_bottom_hinge_top_mirror___1__2" contype="0" conaffinity="0" />
+        <geom pos="0.0827849 -0.161764 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2f_femur__1__mirror__2" contype="0" conaffinity="0" />
+        <geom pos="0.0827849 -0.161764 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2f_femur_tibia_joint_13" contype="0" conaffinity="0" />
+        <body name="l2t" pos="-0.1227 -0.00075 -2.11133e-10">
+          <inertial pos="-0.118035 -0.025884 -0.00248816" quat="-0.00680763 0.689623 -0.00979835 0.72407" mass="0.649249" diaginertia="0.00223885 0.00222688 0.000103756" />
+          <joint name="leg2_tibia" axis="0 1 0" ref="180" damping="0.5" />
+          <geom pos="0.205485 -0.161014 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2t_tiba_shaft_mirror__2" contype="0" conaffinity="0" />
+          <geom pos="0.205485 -0.161014 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2t_tibia_hinge_bottom_mirror__2" contype="0" conaffinity="0" />
+          <geom pos="0.205485 -0.161014 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2t_tibia_hinge_top_mirror__2" contype="0" conaffinity="0" />
+          <geom pos="0.205485 -0.161014 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2t_ankle_mirror__2" contype="1" conaffinity="1" friction="1.5 0.005 0.0001" />
+        </body>
+      </body>
+    </body>
+    <body name="l1c" pos="-0.0677849 0.0472636 0.0195">
+      <inertial pos="-0.0062905 -0.00150627 -0.0138124" quat="-0.0287061 0.712107 0.0571421 0.699152" mass="0.33378" diaginertia="0.00010519 7.7165e-05 5.97497e-05" />
+      <joint name="leg1_coxa" axis="0 0 -1" ref="90" damping="0.5" />
+      <geom pos="0.0677849 -0.0472636 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1c_coxa_bottom_servo_mirror___1__1" contype="0" conaffinity="0" />
+      <geom pos="0.0677849 -0.0472636 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="l1c_servo___horn_18" contype="0" conaffinity="0" />
+      <body name="l1f" pos="-0.015 0.0265 -0.0155">
+        <inertial pos="-0.0852805 -0.0278467 8.38854e-09" quat="-0.0086409 0.707054 0.00864085 0.707054" mass="0.576847" diaginertia="0.000940028 0.000886224 0.000109237" />
+        <joint name="leg1_femur" axis="0 1 0" ref="90" damping="0.5" />
+        <geom pos="0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1f_coxa_bottom_hinge_bottom_mirror___1__1" contype="0" conaffinity="0" />
+        <geom pos="0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1f_coxa_bottom_hinge_top_mirror___1__1" contype="0" conaffinity="0" />
+        <geom pos="0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1f_femur__1__mirror__1" contype="0" conaffinity="0" />
+        <geom pos="0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1f_femur_tibia_joint_12" contype="0" conaffinity="0" />
+        <body name="l1t" pos="-0.1227 -0.00075 -2.11128e-10">
+          <inertial pos="-0.118035 -0.025884 -0.00248816" quat="-0.00680763 0.689623 -0.00979835 0.72407" mass="0.649249" diaginertia="0.00223885 0.00222688 0.000103756" />
+          <joint name="leg1_tibia" axis="0 1 0" ref="180" damping="0.5" />
+          <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1t_tiba_shaft_mirror__1" contype="0" conaffinity="0" />
+          <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1t_tibia_hinge_bottom_mirror__1" contype="0" conaffinity="0" />
+          <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1t_tibia_hinge_top_mirror__1" contype="0" conaffinity="0" />
+          <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1t_ankle_mirror__1" contype="1" conaffinity="1" friction="1.5 0.005 0.0001" />
+        </body>
+      </body>
+    </body>
+    <body name="l3c" pos="0.0677849 0.135264 0.0195">
+      <inertial pos="0.0062905 -0.00150627 -0.0138124" quat="0.0571421 0.699152 -0.0287061 0.712107" mass="0.33378" diaginertia="0.00010519 7.7165e-05 5.97497e-05" />
+      <joint name="leg3_coxa" axis="0 0 -1" ref="90" damping="0.5" />
+      <geom pos="-0.0677849 -0.135264 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="l3c_servo___horn_17" contype="0" conaffinity="0" />
+      <geom pos="-0.0677849 -0.135264 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3c_coxa_bottom_servo_6" contype="0" conaffinity="0" />
+      <body name="l3f" pos="0.015 0.0265 -0.0155">
+        <inertial pos="0.0852804 -0.0278467 -8.77745e-10" quat="0.00864075 0.707054 -0.00864072 0.707054" mass="0.57685" diaginertia="0.00094003 0.000886226 0.000109237" />
+        <joint name="leg3_femur" axis="0 1 0" ref="90" damping="0.5" />
+        <geom pos="-0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3f_femur__1__3" contype="0" conaffinity="0" />
+        <geom pos="-0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3f_femur_tibia_joint_11" contype="0" conaffinity="0" />
+        <geom pos="-0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3f_coxa_bottom_hinge_bottom_5" contype="0" conaffinity="0" />
+        <geom pos="-0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3f_coxa_bottom_hinge_top_5" contype="0" conaffinity="0" />
+        <body name="l3t" pos="0.1227 -0.00075 -2.11135e-10">
+          <inertial pos="0.118036 -0.025884 -0.00248812" quat="-0.00979387 0.72407 -0.00680305 0.689623" mass="0.649247" diaginertia="0.00223884 0.00222687 0.000103756" />
+          <joint name="leg3_tibia" axis="0 1 0" ref="0" damping="0.5" />
+          <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3t_ankle_3" contype="1" conaffinity="1" friction="1.5 0.005 0.0001" />
+          <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3t_tibia_hinge_top_6" contype="0" conaffinity="0" />
+          <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3t_tibia_hinge_bottom_6" contype="0" conaffinity="0" />
+          <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3t_tiba_shaft_6" contype="0" conaffinity="0" />
+        </body>
+      </body>
+    </body>
+    <body name="l0c" pos="0.0677849 0.0472636 0.0195">
+      <inertial pos="0.0062905 -0.00150627 -0.0138124" quat="0.0571421 0.699152 -0.0287061 0.712107" mass="0.33378" diaginertia="0.00010519 7.7165e-05 5.97497e-05" />
+      <joint name="leg0_coxa" axis="0 0 -1" ref="90" damping="0.5" />
+      <geom pos="-0.0677849 -0.0472636 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0c_coxa_bottom_servo_1" contype="0" conaffinity="0" />
+      <geom pos="-0.0677849 -0.0472636 -0.0195" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="l0c_servo___horn_12" contype="0" conaffinity="0" />
+      <body name="l0f" pos="0.015 0.0265 -0.0155">
+        <inertial pos="0.0852804 -0.0278467 -8.77745e-10" quat="0.00864075 0.707054 -0.00864072 0.707054" mass="0.57685" diaginertia="0.00094003 0.000886226 0.000109237" />
+        <joint name="leg0_femur" axis="0 1 0" ref="90" damping="0.5" />
+        <geom pos="-0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0f_coxa_bottom_hinge_top_1" contype="0" conaffinity="0" />
+        <geom pos="-0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0f_coxa_bottom_hinge_bottom_1" contype="0" conaffinity="0" />
+        <geom pos="-0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0f_femur_tibia_joint_6" contype="0" conaffinity="0" />
+        <geom pos="-0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0f_femur__1__2" contype="0" conaffinity="0" />
+        <body name="l0t" pos="0.1227 -0.00075 -2.11135e-10">
+          <inertial pos="0.118036 -0.025884 -0.00248812" quat="-0.00979387 0.72407 -0.00680305 0.689623" mass="0.649247" diaginertia="0.00223884 0.00222687 0.000103756" />
+          <joint name="leg0_tibia" axis="0 1 0" ref="0" damping="0.5" />
+          <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0t_tiba_shaft_2" contype="0" conaffinity="0" />
+          <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0t_tibia_hinge_bottom_2" contype="0" conaffinity="0" />
+          <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0t_tibia_hinge_top_2" contype="0" conaffinity="0" />
+          <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0t_ankle_2" contype="1" conaffinity="1" friction="1.5 0.005 0.0001" />
+        </body>
+      </body>
+    </body>
+  </body><geom name="floor" type="plane" size="2 2 0.1" contype="1" conaffinity="1" material="floor_mat" /></worldbody>
+<option timestep="0.002" /><actuator><position name="leg2_coxa_act" joint="leg2_coxa" kp="30.0" forcerange="-9.4 9.4" /><position name="leg2_femur_act" joint="leg2_femur" kp="30.0" forcerange="-9.4 9.4" /><position name="leg2_tibia_act" joint="leg2_tibia" kp="30.0" forcerange="-9.4 9.4" /><position name="leg1_coxa_act" joint="leg1_coxa" kp="30.0" forcerange="-9.4 9.4" /><position name="leg1_femur_act" joint="leg1_femur" kp="30.0" forcerange="-9.4 9.4" /><position name="leg1_tibia_act" joint="leg1_tibia" kp="30.0" forcerange="-9.4 9.4" /><position name="leg3_coxa_act" joint="leg3_coxa" kp="30.0" forcerange="-9.4 9.4" /><position name="leg3_femur_act" joint="leg3_femur" kp="30.0" forcerange="-9.4 9.4" /><position name="leg3_tibia_act" joint="leg3_tibia" kp="30.0" forcerange="-9.4 9.4" /><position name="leg0_coxa_act" joint="leg0_coxa" kp="30.0" forcerange="-9.4 9.4" /><position name="leg0_femur_act" joint="leg0_femur" kp="30.0" forcerange="-9.4 9.4" /><position name="leg0_tibia_act" joint="leg0_tibia" kp="30.0" forcerange="-9.4 9.4" /></actuator></mujoco>

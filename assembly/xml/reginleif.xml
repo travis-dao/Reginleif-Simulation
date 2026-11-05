@@ -121,7 +121,7 @@
         <geom pos="-0.0827849 -0.161764 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3f_coxa_bottom_hinge_top_5"/>
         <body name="l3t" pos="0.1227 -0.00075 -2.11135e-10">
           <inertial pos="0.118036 -0.025884 -0.00248812" quat="-0.00979387 0.72407 -0.00680305 0.689623" mass="0.649247" diaginertia="0.00223884 0.00222687 0.000103756"/>
-          <joint name="leg3_tibia" axis="0 1 0"/>
+          <joint name="leg3_tibia" axis="0 1 0" ref="0"/>
           <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3t_ankle_3"/>
           <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3t_tibia_hinge_top_6"/>
           <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3t_tibia_hinge_bottom_6"/>
@@ -143,7 +143,7 @@
         <geom pos="-0.0827849 -0.0737636 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0f_femur__1__2"/>
         <body name="l0t" pos="0.1227 -0.00075 -2.11135e-10">
           <inertial pos="0.118036 -0.025884 -0.00248812" quat="-0.00979387 0.72407 -0.00680305 0.689623" mass="0.649247" diaginertia="0.00223884 0.00222687 0.000103756"/>
-          <joint name="leg0_tibia" axis="0 1 0"/>
+          <joint name="leg0_tibia" axis="0 1 0" ref="0"/>
           <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0t_tiba_shaft_2"/>
           <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0t_tibia_hinge_bottom_2"/>
           <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0t_tibia_hinge_top_2"/>

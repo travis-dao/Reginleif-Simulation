@@ -1,0 +1,58 @@
+{
+  "rigid_groups": [
+    {
+      "name": "base",
+      "mass_kg": 1.96272531
+    },
+    {
+      "name": "l2c",
+      "mass_kg": 0.333780314
+    },
+    {
+      "name": "l1c",
+      "mass_kg": 0.333780314
+    },
+    {
+      "name": "l3c",
+      "mass_kg": 0.333780314
+    },
+    {
+      "name": "l0c",
+      "mass_kg": 0.333780314
+    },
+    {
+      "name": "l2f",
+      "mass_kg": 0.576847324
+    },
+    {
+      "name": "l1f",
+      "mass_kg": 0.576847324
+    },
+    {
+      "name": "l3f",
+      "mass_kg": 0.576850245
+    },
+    {
+      "name": "l0f",
+      "mass_kg": 0.576850245
+    },
+    {
+      "name": "l2t",
+      "mass_kg": 0.649248829
+    },
+    {
+      "name": "l1t",
+      "mass_kg": 0.649248829
+    },
+    {
+      "name": "l3t",
+      "mass_kg": 0.649246758
+    },
+    {
+      "name": "l0t",
+      "mass_kg": 0.649246758
+    }
+  ],
+  "total_known_mass_kg": 8.202232878000002,
+  "number_of_links": 13
+}
