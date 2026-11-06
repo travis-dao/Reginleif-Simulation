@@ -6,38 +6,14 @@ import mujoco
 import mujoco.viewer
 import xml.etree.ElementTree as ET
 
+from movement import LegController, IKConfig, neutral_foot_pos
+
 SRC = "assembly/xml/reginleif.xml"        # your original file
 DST = "assembly/xml/reginleif_sim.xml"     # must be saved in the same folder as SRC
 
 KP = 30.0                   # servo stiffness (tune)
 FORCE = 9.4                 # max joint torque in N*m (set to your servo spec)
 START_HEIGHT = 0.5         # drop height of the base, adjust to your geometry
-
-'''
-foot_neutral_offset_mag = { 120.0f, 120.0f, -40.0f }
-Leg 0 | coxa=135.00, femur=37.03, tibia=112.71
-Leg 1 | coxa=45.00, femur=142.97, tibia=67.29
-Leg 2 | coxa=135.00, femur=142.97, tibia=67.29
-Leg 3 | coxa=45.00, femur=37.03, tibia=112.71
-'''
-
-joint_angles = {
-    "leg0_coxa":  0.0,
-    "leg0_femur": 0.0,
-    "leg0_tibia": 0.0,
-
-    "leg1_coxa":  0.0,
-    "leg1_femur": 0.0,
-    "leg1_tibia": 0.0,
-
-    "leg2_coxa":  0.0,
-    "leg2_femur": 0.0,
-    "leg2_tibia": 0.0,
-
-    "leg3_coxa":  0.0,
-    "leg3_femur": 0.0,
-    "leg3_tibia": 0.0,
-}
 
 # ---------- build the simulation XML ----------
 tree = ET.parse(SRC)
@@ -85,45 +61,17 @@ tree.write(DST)
 model = mujoco.MjModel.from_xml_path(DST)
 data = mujoco.MjData(model)
 
-def init_joint_angles():
-    joint_angles["leg0_coxa"] = np.deg2rad(135)
-    joint_angles["leg1_coxa"] = np.deg2rad(45) #
-    joint_angles["leg2_coxa"] = np.deg2rad(135) #
-    joint_angles["leg3_coxa"] = np.deg2rad(45)
+cfg = IKConfig(
+    body_coxa_x_mm=15,      # fill in from your firmware
+    femur_length_mm=123,
+    tibia_length_mm=160,
+    c_max=123+160,
+    c_min=160-123
+)
+legs = LegController(model, data, cfg, True)
 
-    joint_angles["leg0_femur"] = np.deg2rad(37)
-    joint_angles["leg1_femur"] = np.deg2rad(143) #
-    joint_angles["leg2_femur"] = np.deg2rad(143) #
-    joint_angles["leg3_femur"] = np.deg2rad(37)
-
-    joint_angles["leg0_tibia"] = np.deg2rad(113)
-    joint_angles["leg1_tibia"] = np.deg2rad(67) #
-    joint_angles["leg2_tibia"] = np.deg2rad(67) #
-    joint_angles["leg3_tibia"] = np.deg2rad(113)
-
-def set_joint_angles(model, data, angles, forward=True):
-    """Set joint positions by name from a dict {joint_name: angle_rad}."""
-    for name, angle in angles.items():
-        jid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
-        if jid == -1:
-            raise KeyError(f"Joint '{name}' not found in model")
-        qpos_adr = model.jnt_qposadr[jid]
-        data.qpos[qpos_adr] = angle
-    if forward:
-        mujoco.mj_forward(model, data)
-
-init_joint_angles()
-set_joint_angles(model, data, joint_angles)
-
-# hold that pose with the servos
-for name, ang in joint_angles.items():
-    aid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, name + "_act")
-    data.ctrl[aid] = ang
-
-# sanity check: servo-space angles in degrees
-for name in joint_angles:
-    jid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
-    print(name, np.rad2deg(data.qpos[model.jnt_qposadr[jid]]))
+for i in range(4):
+    legs.set_foot(i, neutral_foot_pos[i])
 
 with mujoco.viewer.launch_passive(model, data) as viewer:
     while viewer.is_running():
