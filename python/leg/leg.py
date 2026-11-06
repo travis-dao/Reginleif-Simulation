@@ -25,8 +25,7 @@ from .leg_config import (
 #   invert_angles(angles: Theta3) -> Theta3
 #   ServoConfig.limits[leg_idx].{coxa,femur,tibia}.{min_deg,max_deg,clamp(deg)}
 from .movement import IK
-# from servo import ServoConfig
-
+from .limits import ServoLimit, ServoConfig, LegServoLimits
 
 class LegState(Enum):
     HOLD = auto()
@@ -46,13 +45,13 @@ class FootPositionState:
     stance_target_pos_lf: Vec3
 
 
-# def clamp_to_limits(angles_deg: Theta3, leg_idx: int) -> Theta3:
-#     lim = ServoConfig.limits[leg_idx]
-#     return Theta3(
-#         lim.coxa.clamp(angles_deg.coxa),
-#         lim.femur.clamp(angles_deg.femur),
-#         lim.tibia.clamp(angles_deg.tibia),
-#     )
+def clamp_to_limits(angles_deg: Theta3, leg_idx: int) -> Theta3:
+    lim = ServoConfig.limits[leg_idx]
+    return Theta3(
+        lim.coxa.clamp(angles_deg.coxa),
+        lim.femur.clamp(angles_deg.femur),
+        lim.tibia.clamp(angles_deg.tibia),
+    )
 
 
 # def outside_servo_limits(angles_deg: Theta3, leg_idx: int) -> bool:
@@ -179,10 +178,10 @@ class Leg:
                 angles = IK.invert_angles(angles)
 
             # clamp to calibrated limits
-            # self.servo_angles_deg = clamp_to_limits(angles, self.id)
+            self.servo_angles_deg = clamp_to_limits(angles, self.id)
 
         # print(f"leg {self.id}, coxa={angles.coxa}, femur={angles.femur}, tibia={angles.tibia}")
-        self.servo_angles_deg = angles
+        # self.servo_angles_deg = angles
 
     def _update_stance(self, dt_s: float) -> None:
         self.stance_phase += dt_s / (Movement.SWING_DURATION_S * 3.0)

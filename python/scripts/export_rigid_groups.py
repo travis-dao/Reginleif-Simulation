@@ -1,4 +1,4 @@
-# python python/export_rigid_groups.py assembly/urdf/assembly.urdf assembly/json/rigid_groups.json
+# python python/scripts/export_rigid_groups.py assembly/urdf/assembly.urdf assembly/json/rigid_groups.json
 
 import json
 import sys

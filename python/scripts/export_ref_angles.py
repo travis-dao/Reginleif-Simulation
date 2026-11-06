@@ -1,4 +1,4 @@
-# python python/export_ref_angles.py assembly/xml/reginleif.xml assembly/json/joint_ref_angles.json
+# python python/scripts/export_ref_angles.py assembly/xml/reginleif.xml assembly/json/joint_ref_angles.json
 
 import json
 import sys

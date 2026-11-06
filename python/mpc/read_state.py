@@ -1,7 +1,7 @@
 import numpy as np
 import mujoco
 from dataclasses import dataclass, field
-from mpc import State
+from .mpc import State
 
 def read_state(model: mujoco.MjModel, data: mujoco.MjData, body_id: int) -> State:
     s = State()
