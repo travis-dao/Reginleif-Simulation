@@ -3,7 +3,7 @@ import mujoco
 from dataclasses import dataclass, field
 from .mpc import State
 
-def read_state(model: mujoco.MjModel, data: mujoco.MjData, body_id: int) -> State:
+def read_state(model: mujoco.MjModel, data: mujoco.MjData, body_id: int, debug: bool = False) -> State:
     s = State()
 
     # Free joint of this body
@@ -30,5 +30,15 @@ def read_state(model: mujoco.MjModel, data: mujoco.MjData, body_id: int) -> Stat
 
     # Gravity from the model rather than hardcoding
     s.g = float(model.opt.gravity[2])
+
+    if debug:
+        print("\n========== MuJoCo State ==========")
+        print(f"Position (world)    : {np.array2string(s.pos, precision=3)}")
+        print(f"Orientation (deg)   : roll={np.degrees(s.roll):7.2f}, "
+            f"pitch={np.degrees(s.pitch):7.2f}, yaw={np.degrees(s.yaw):7.2f}")
+        print(f"Linear velocity    : {np.array2string(s.linear_vel, precision=3)}")
+        print(f"Angular velocity   : {np.array2string(s.angular_vel, precision=3)}")
+        print(f"Gravity Z          : {s.g:.3f} m/s^2")
+        print("==================================\n")
 
     return s

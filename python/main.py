@@ -25,6 +25,12 @@ data = mujoco.MjData(model)
 controller = LegController(model, data)
 controller.init()
 
+body_id = mujoco.mj_name2id(
+    model,
+    mujoco.mjtObj.mjOBJ_BODY,
+    "base"
+)
+
 with mujoco.viewer.launch_passive(model, data) as viewer:
     while viewer.is_running():
         step_start = time.time()
@@ -32,6 +38,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         # update gaits
 
         # read current model state
+        read_state(model, data, body_id, debug=False)
 
         # mpc.solve
 
