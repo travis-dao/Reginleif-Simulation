@@ -6,7 +6,9 @@ import mujoco
 import mujoco.viewer
 import xml.etree.ElementTree as ET
 
-from movement import LegController, IKConfig, neutral_foot_pos
+from leg.leg_controller import LegController
+from mpc import State, Input, Model, DiscreteModel, MPCProblem, MPCResult, MPCConfig, MPC
+from state import read_state
 
 SRC = "assembly/xml/reginleif.xml"        # your original file
 DST = "assembly/xml/reginleif_sim.xml"     # must be saved in the same folder as SRC
@@ -36,7 +38,7 @@ for g in base.iter("geom"):
     if "ankle" in g.get("mesh", ""):
         g.set("contype", "1")
         g.set("conaffinity", "1")
-        g.set("friction", "1.5 0.005 0.0001")
+        g.set("friction", "0.7 0.005 0.0001")
 
 # Add this inside <asset> before the floor geom is created
 asset = root.find("asset")
@@ -61,21 +63,22 @@ tree.write(DST)
 model = mujoco.MjModel.from_xml_path(DST)
 data = mujoco.MjData(model)
 
-cfg = IKConfig(
-    body_coxa_x_mm=15,      # fill in from your firmware
-    femur_length_mm=123,
-    tibia_length_mm=160,
-    c_max=123+160,
-    c_min=160-123
-)
-legs = LegController(model, data, cfg, True)
-
-for i in range(4):
-    legs.set_foot(i, neutral_foot_pos[i])
+controller = LegController(model, data)
+controller.init()
 
 with mujoco.viewer.launch_passive(model, data) as viewer:
     while viewer.is_running():
         step_start = time.time()
+
+        # update gaits
+
+        # read current model state
+
+        # mpc.solve
+
+        # update foot position
+        controller.update(0.001, None)
+
         mujoco.mj_step(model, data)
         viewer.sync()
         sleep = model.opt.timestep - (time.time() - step_start)

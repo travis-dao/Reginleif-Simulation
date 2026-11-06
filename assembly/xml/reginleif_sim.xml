@@ -81,7 +81,7 @@
           <geom pos="0.205485 -0.161014 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2t_tiba_shaft_mirror__2" contype="0" conaffinity="0" />
           <geom pos="0.205485 -0.161014 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2t_tibia_hinge_bottom_mirror__2" contype="0" conaffinity="0" />
           <geom pos="0.205485 -0.161014 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2t_tibia_hinge_top_mirror__2" contype="0" conaffinity="0" />
-          <geom pos="0.205485 -0.161014 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2t_ankle_mirror__2" contype="1" conaffinity="1" friction="1.5 0.005 0.0001" />
+          <geom pos="0.205485 -0.161014 -0.0041" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l2t_ankle_mirror__2" contype="1" conaffinity="1" friction="0.7 0.005 0.0001" />
         </body>
       </body>
     </body>
@@ -103,7 +103,7 @@
           <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1t_tiba_shaft_mirror__1" contype="0" conaffinity="0" />
           <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1t_tibia_hinge_bottom_mirror__1" contype="0" conaffinity="0" />
           <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1t_tibia_hinge_top_mirror__1" contype="0" conaffinity="0" />
-          <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1t_ankle_mirror__1" contype="1" conaffinity="1" friction="1.5 0.005 0.0001" />
+          <geom pos="0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l1t_ankle_mirror__1" contype="1" conaffinity="1" friction="0.7 0.005 0.0001" />
         </body>
       </body>
     </body>
@@ -122,7 +122,7 @@
         <body name="l3t" pos="0.1227 -0.00075 -2.11135e-10">
           <inertial pos="0.118036 -0.025884 -0.00248812" quat="-0.00979387 0.72407 -0.00680305 0.689623" mass="0.649247" diaginertia="0.00223884 0.00222687 0.000103756" />
           <joint name="leg3_tibia" axis="0 1 0" ref="0" damping="0.5" />
-          <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3t_ankle_3" contype="1" conaffinity="1" friction="1.5 0.005 0.0001" />
+          <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3t_ankle_3" contype="1" conaffinity="1" friction="0.7 0.005 0.0001" />
           <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3t_tibia_hinge_top_6" contype="0" conaffinity="0" />
           <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3t_tibia_hinge_bottom_6" contype="0" conaffinity="0" />
           <geom pos="-0.205485 -0.161014 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l3t_tiba_shaft_6" contype="0" conaffinity="0" />
@@ -147,7 +147,7 @@
           <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0t_tiba_shaft_2" contype="0" conaffinity="0" />
           <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0t_tibia_hinge_bottom_2" contype="0" conaffinity="0" />
           <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0t_tibia_hinge_top_2" contype="0" conaffinity="0" />
-          <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0t_ankle_2" contype="1" conaffinity="1" friction="1.5 0.005 0.0001" />
+          <geom pos="-0.205485 -0.0730136 -0.004" quat="1 0 0 0" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="l0t_ankle_2" contype="1" conaffinity="1" friction="0.7 0.005 0.0001" />
         </body>
       </body>
     </body>
