@@ -1,6 +1,5 @@
-
 # Run with:
-# python python/graph_forces.py
+# python python/visualization/graph_forces.py
 
 import html
 import re
@@ -362,7 +361,7 @@ ani = FuncAnimation(
     repeat=False,
 )
 
-ani.save("quadruped_forces.gif", writer="pillow", fps=30)
+# ani.save("quadruped_forces.gif", writer="pillow", fps=30)
 
 plt.tight_layout()
 plt.show()

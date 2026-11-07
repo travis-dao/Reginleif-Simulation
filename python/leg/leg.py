@@ -4,7 +4,9 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Tuple
+
+import csv
+from pathlib import Path
 
 from .leg_config import (
     BODY_COXA_X_MM,
@@ -108,6 +110,9 @@ class Leg:
         self.mpc_offset_lf = Vec3(0.0, 0.0, 0.0)
         self._mpc_offset_cmd = Vec3(0.0, 0.0, 0.0)
 
+        self.angle_log = []
+        self.time_s = 0.0
+
         self._move_leg()
 
     # ------------------------------------------------------------------
@@ -148,10 +153,8 @@ class Leg:
         self._set_state(LegState.STANCE)
 
     def update(self, dt_s: float, imu_data: ImuData) -> Theta3:
-        """Advance the leg by dt_s and return the target servo angles (deg).
+        self.time_s += dt_s
 
-        (The C++ version used an out-parameter; Python just returns it.)
-        """
         if self.leg_state == LegState.SWING:
             self._update_swing(dt_s)
         elif self.leg_state == LegState.STANCE:
@@ -166,7 +169,7 @@ class Leg:
         cmd = zero if self.leg_state == LegState.SWING else self._mpc_offset_cmd
         alpha = 1.0 - math.exp(-dt_s / self.MPC_OFFSET_TAU_S)
         self.mpc_offset_lf = self.mpc_offset_lf + (cmd - self.mpc_offset_lf) * alpha
-        print(self.mpc_offset_lf)
+        # print(self.mpc_offset_lf)
 
         self._move_leg()
 
@@ -182,6 +185,24 @@ class Leg:
         self.pos_state.foot_target_pos_lf = corrected_pos_lf
         self._move_leg()
 
+    def export_angle_log(self) -> None:
+        path = Path(f"python/logs/leg{self.id}_trajectory_angles.csv")
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not self.angle_log:
+            print("No data samples recorded; CSV not written.")
+            return
+
+        fieldnames = list(self.angle_log[0].keys())
+
+        with path.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(self.angle_log)
+
+        print(f"Recorded samples: {len(self.angle_log)}")
+        print(f"CSV saved to: {path.resolve()}")
+
     # ------------------------------------------------------------------
     # internals
     # ------------------------------------------------------------------
@@ -192,27 +213,35 @@ class Leg:
         # try the full MPC offset first; if IK says unreachable (which would leave the
         # servos frozen at their old angles) retry with less offset, then none.
         angles = None
-        for scale in (1.0, 0.5, 0.0):
-            target = (self.pos_state.foot_target_pos_lf + self.mpc_offset_lf * scale).copy()
-            target.y *= -1.0 if _is_right_leg(self.id) else 1.0  # flip y for right-side legs
-            angles = IK.solve(
-                target=target,
-                body_coxa_x_mm=BODY_COXA_X_MM,
-                femur_length_mm=FEMUR_LENGTH_MM,
-                tibia_length_mm=TIBIA_LENGTH_MM,
-                c_min=c_min,
-                c_max=c_max,
-            )
-            if angles is not None:
-                break
+
+        
+        target = (self.pos_state.foot_target_pos_lf + self.mpc_offset_lf).copy()
+        target.y *= -1.0 if _is_right_leg(self.id) else 1.0  # flip y for right-side legs
+        angles = IK.solve(
+            target=target,
+            body_coxa_x_mm=BODY_COXA_X_MM,
+            femur_length_mm=FEMUR_LENGTH_MM,
+            tibia_length_mm=TIBIA_LENGTH_MM,
+            c_min=c_min,
+            c_max=c_max,
+        )
 
         if angles is not None:
             # flip angles for reverse-mounted servos (left side)
             if not _is_right_leg(self.id):
                 angles = IK.invert_angles(angles)
 
+            row = {}
+            row[f"time_s"] = self.time_s
+            row[f"target_coxa"] = angles.coxa
+            row[f"target_femur"] = angles.femur
+            row[f"target_tibia"] = angles.tibia
             # clamp to calibrated limits
             self.servo_angles_deg = clamp_to_limits(angles, self.id)
+            row[f"real_coxa"] = self.servo_angles_deg.coxa
+            row[f"real_femur"] = self.servo_angles_deg.femur
+            row[f"real_tibia"] = self.servo_angles_deg.tibia
+            self.angle_log.append(row)
         else:
             print("ik failed")
 

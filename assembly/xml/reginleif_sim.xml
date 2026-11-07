@@ -55,7 +55,7 @@
     <material name="floor_mat" texture="grid" texrepeat="5 5" reflectance="0.1" />
   </asset>
   <worldbody>
-    <body name="base" pos="0 0 0.5">
+    <body name="base" pos="0 0 0.2">
       <freejoint name="root" />
       <body name="base_rot" pos="0 0 0" quat="0.707107 0 0 0.707107">
         <geom quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="base_servo___horn_13" contype="0" conaffinity="0" />

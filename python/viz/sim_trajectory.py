@@ -1,5 +1,11 @@
+# mjpython python/viz/sim_trajectory.py
 
-# mjpython python/visualize_trajectory.py
+import sys
+from pathlib import Path
+
+# Add the python/ directory to the module search path.
+PYTHON_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PYTHON_DIR))
 
 import time
 import mujoco
@@ -74,3 +80,5 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         sleep = dt - (time.time() - step_start)
         if sleep > 0:
             time.sleep(sleep)
+
+# controller.export_angle_log([0])

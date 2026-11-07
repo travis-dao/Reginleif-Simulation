@@ -81,3 +81,7 @@ class LegController:
         The MPC horizon can span several swings (the gait is one leg at a time),
         so any leg may land inside it -- not only the currently airborne one."""
         return [leg_to_body_frame(i, self.legs[i].get_nominal_landing_pos()) for i in range(4)]
+
+    def export_angle_log(self, ids: List[int]=[0, 1, 2, 3]) -> None:
+        for i in ids:
+            self.legs[i].export_angle_log()

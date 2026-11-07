@@ -101,4 +101,4 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         if sleep > 0:
             time.sleep(sleep)
 
-core.export_force_log()
+# core.export_force_log()

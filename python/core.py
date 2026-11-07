@@ -76,33 +76,11 @@ class Core:
 
         s0 = read_state(model, data, body_id)
         feet_world = self._foot_positions_world(s0)
-        # if self.last_result is None:
-        #     print(f"Body position (world): {s0.pos}")
-        #     print(f"Body yaw: {s0.yaw:.3f} rad")
-
-        #     feet_body = self.lc.foot_positions_body()
-
-        #     print("Feet in body frame (m):")
-        #     for name, foot in zip(["FL", "FR", "BR", "BL"], feet_body):
-        #         print(f"  {name}: {_v_m(foot)}")
-
-        #     print("Feet in world frame (m):")
-        #     for name, foot in zip(["FL", "FR", "BR", "BL"], feet_world):
-        #         print(f"  {name}: {foot}")
 
         if self.yaw_des is None:
             self.yaw_des = s0.yaw
 
         x_ref = self._reference(s0)
-        # print(
-        #     f"yaw_des={self.yaw_des:.3f}, "
-        #     f"yaw_actual={s0.yaw:.3f}\n"
-        #     f"v_des_world={x_ref[0][9:12]}\n"
-        #     f"v_actual_world={s0.linear_vel}\n"
-        #     f"p_actual_world={s0.pos}\n"
-        #     f"p_ref_first={x_ref[0][3:6]}\n"
-        #     f"p_ref_last={x_ref[-1][3:6]}\n"
-        # )
         contact = self._contact_schedule()
         feet = self._foot_rel_pos(s0, x_ref, contact)
 
@@ -121,24 +99,6 @@ class Core:
                 if 0 <= swing_leg < 4
                 else "NONE"
             )
-
-            # print(
-            #     f"t={data.time:.3f}s | "
-            #     f"swing leg={swing_name} ({swing_leg})"
-            # )
-
-            # for i, name in enumerate(leg_names):
-            #     fx, fy, fz = forces[i]
-            #     print(
-            #         f"  {name}: "
-            #         f"Fx={fx:8.3f} N, "
-            #         f"Fy={fy:8.3f} N, "
-            #         f"Fz={fz:8.3f} N"
-            #     )
-
-            # Compare commanded foot positions against actual MuJoCo geometry.
-            # for name, foot in zip(["FL", "FR", "BR", "BL"], feet_world):
-            #     print(f"{name} commanded world position: {foot}")
 
             # One row per successful MPC solve.
             row = {
@@ -269,6 +229,13 @@ class Core:
         ramp = min(1.0, self._t_engaged / self.ramp_s) if self.ramp_s > 0 else 1.0
         corr_w = foot_forces_to_positions(fw, self.gain * ramp, self.max_corr)
         # print(corr_w) # prints 0
+        print(
+            f"leg={i} "
+            f"force={forces[i]} "
+            f"nominal_share={share:.2f} "
+            f"force_deviation={f} "
+            f"offset={corr_w[i]}"
+        )
         return [world_vector_to_leg_frame(c, yaw) for c in corr_w]
 
     

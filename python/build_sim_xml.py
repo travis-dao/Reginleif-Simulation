@@ -61,7 +61,7 @@ def build_sim_xml(
             j.set("ref", str(angle_rad))
             found_joints.add(name)
 
-            print(f"{name}: ref = {angle_deg} deg ({angle_rad:.6f} rad)")
+            # print(f"{name}: ref = {angle_deg} deg ({angle_rad:.6f} rad)")
 
         j.set("damping", "0.5")
 
