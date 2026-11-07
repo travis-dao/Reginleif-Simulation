@@ -217,9 +217,9 @@ class MPC:
         """Indices s.t. H[triu_idx][order] matches the csc data layout of the pattern."""
         n = self.N * NU
         tag = sp.csc_matrix(
-            (np.arange(len(self._triu_idx[0]), dtype=float), (self._triu_idx[0], self._triu_idx[1])),
+            (np.arange(1, len(self._triu_idx[0]) + 1, dtype=float), (self._triu_idx[0], self._triu_idx[1])),
             shape=(n, n))
-        return tag.data.astype(int)
+        return tag.data.astype(int) - 1  # +1/-1: keeps index 0 from being an explicit zero
 
     # -- 1 -------------------------------------------------------------------
     def build_discrete_models(self, p: MPCProblem) -> None:
@@ -281,7 +281,7 @@ class MPC:
             self.solver_initialized = True
         else:
             self._solver.update(Px=Px, q=self.q, l=self.lb, u=self.ub)
-        self._solver.warm_start(x=self.U_prev)
+        self._solver.warm_start(x=self.shift(self.U_prev))
 
         res = self._solver.solve()
         if res.info.status != "Solved" and res.info.status != "solved":

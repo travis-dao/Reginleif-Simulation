@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 from typing import List, Optional
-from dataclasses import dataclass
-import mujoco
 
 from .leg import Leg
 from .leg_config import ImuData, Movement, Offset, Theta3, Vec3
@@ -19,7 +17,6 @@ def leg_to_body_frame(leg: int, foot_pos_lf: Vec3) -> Vec3:
 
 def body_to_leg_frame(leg: int, foot_pos_bf: Vec3) -> Vec3:
     return foot_pos_bf - Offset.leg_base_pos_bf[leg]
-
 
 
 class LegController:
@@ -43,6 +40,11 @@ class LegController:
     def get_swing_leg(self) -> int:
         return self.swing_leg
 
+    def swing_time_remaining_s(self) -> float:
+        if self.swing_leg < 0:
+            return 0.0
+        return self.legs[self.swing_leg].swing_time_remaining_s()
+
     def update(self, dt_s: float, imu_data: ImuData) -> None:
         # gait sequencing
         self.grounded = all(leg.is_grounded() for leg in self.legs)
@@ -51,29 +53,31 @@ class LegController:
         if self.grounded:
             nxt = Movement.next_leg_gait[self.swing_leg + 1]
             self.swing_leg = nxt
-
-            nominal_landing_bf = leg_to_body_frame(nxt, self.legs[nxt].get_nominal_landing_pos())
-            self.legs[nxt].start_swing(body_to_leg_frame(nxt, nominal_landing_bf))
+            self.legs[nxt].start_swing(self.legs[nxt].get_nominal_landing_pos())
 
         # leg movement calculations
         for i in range(4):
             self.target_angles[i] = self.legs[i].update(dt_s, imu_data)
             self.driver.set_angles(i, self.target_angles[i])
 
+    def apply_mpc_corrections(self, offsets_lf: List[Vec3]) -> None:
+        """Hand each leg its MPC foot OFFSET (leg frame, mm).
+
+        Offsets are layered on top of the gait trajectory inside Leg.update()
+        (low-pass filtered, zeroed for the swing leg), so they are not
+        overwritten by the next trajectory tick and do not accumulate.
+        """
+        for leg, off in zip(self.legs, offsets_lf):
+            # print(off)
+            leg.set_mpc_offset(off)
+
     def foot_positions_body(self) -> List[Vec3]:
-        """Current foot positions, body frame."""
+        """Current foot positions (trajectory + MPC offset), body frame, mm."""
         return [leg_to_body_frame(i, self.legs[i].get_current_leg_pos()) for i in range(4)]
 
     def landing_targets_body(self) -> List[Vec3]:
-        """Where each foot touches down. Only the airborne leg differs from its
-        current position; the next leg to lift lands after the MPC horizon
-        (one swing) ends, so it doesn't need one."""
-        out = []
-        for i in range(4):
-            foot_lf = (
-                self.legs[i].get_nominal_landing_pos()
-                if i == self.swing_leg
-                else self.legs[i].get_current_leg_pos()
-            )
-            out.append(leg_to_body_frame(i, foot_lf))
-        return out
+        """Nominal touchdown position of every foot, body frame, mm.
+
+        The MPC horizon can span several swings (the gait is one leg at a time),
+        so any leg may land inside it -- not only the currently airborne one."""
+        return [leg_to_body_frame(i, self.legs[i].get_nominal_landing_pos()) for i in range(4)]

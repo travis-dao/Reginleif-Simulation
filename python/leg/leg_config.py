@@ -79,9 +79,9 @@ c_min = abs(FEMUR_LENGTH_MM - TIBIA_LENGTH_MM)
 
 
 class Movement:
-    STEP_LENGTH_MM = 150.0
+    STEP_LENGTH_MM = 120.0
     STEP_HEIGHT_MM = 100.0
-    SWING_DURATION_S = 0.250
+    SWING_DURATION_S = 0.4
 
     # indexed by (current swing leg + 1); index 0 is "no leg yet" (-1)
     next_leg_gait: Tuple[int, ...] = (0, 2, 3, 1, 0)

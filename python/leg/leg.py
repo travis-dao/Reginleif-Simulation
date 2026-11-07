@@ -82,6 +82,8 @@ def _smoothstep(t: float) -> float:
 
 
 class Leg:
+    MPC_OFFSET_TAU_S = 0.08  # low-pass time constant of the MPC foot offset
+
     def __init__(self, leg_id: int):
         neutral = Offset.neutral_foot_pos_lf[leg_id]
 
@@ -101,6 +103,11 @@ class Leg:
         self.leg_state = LegState.HOLD
         self.servo_angles_deg = Theta3()
 
+        # MPC foot offset (leg frame, mm). Kept OUTSIDE the swing/stance
+        # trajectory so it never accumulates into it.
+        self.mpc_offset_lf = Vec3(0.0, 0.0, 0.0)
+        self._mpc_offset_cmd = Vec3(0.0, 0.0, 0.0)
+
         self._move_leg()
 
     # ------------------------------------------------------------------
@@ -113,9 +120,20 @@ class Leg:
         return self.pos_state.foot_curr_pos_lf
 
     def get_nominal_landing_pos(self) -> Vec3:
-        end = self.pos_state.swing_start_pos_lf.copy()
-        end.x = Offset.neutral_foot_pos_lf[self.id].x + Movement.STEP_LENGTH_MM / 2.0
+        # Built from the neutral pose (not swing_start_pos_lf, which is stale
+        # when this is called just before start_swing()).
+        end = Offset.neutral_foot_pos_lf[self.id].copy()
+        end.x += Movement.STEP_LENGTH_MM / 2.0
         return end
+
+    def swing_time_remaining_s(self) -> float:
+        if self.leg_state != LegState.SWING:
+            return 0.0
+        return (1.0 - self.swing_phase) * Movement.SWING_DURATION_S
+
+    def set_mpc_offset(self, offset_lf: Vec3) -> None:
+        """Set the desired MPC foot offset (leg frame, mm). Applied smoothly in update()."""
+        self._mpc_offset_cmd = offset_lf.copy()
 
     def start_swing(self, target_pos_lf: Vec3) -> None:
         self.pos_state.swing_start_pos_lf = self.pos_state.foot_target_pos_lf.copy()
@@ -143,14 +161,26 @@ class Leg:
             # TODO: CHANGE LATER (from original)
             self.pos_state.foot_target_pos_lf = Offset.neutral_foot_pos_lf[self.id].copy()
 
+        # low-pass the MPC offset; swing legs carry no ground force -> decay to 0
+        zero = Vec3(0.0, 0.0, 0.0)
+        cmd = zero if self.leg_state == LegState.SWING else self._mpc_offset_cmd
+        alpha = 1.0 - math.exp(-dt_s / self.MPC_OFFSET_TAU_S)
+        self.mpc_offset_lf = self.mpc_offset_lf + (cmd - self.mpc_offset_lf) * alpha
+        print(self.mpc_offset_lf)
+
         self._move_leg()
 
-        self.pos_state.foot_curr_pos_lf = self.pos_state.foot_target_pos_lf.copy()
+        # curr = where the foot really is (trajectory + MPC offset)
+        self.pos_state.foot_curr_pos_lf = self.pos_state.foot_target_pos_lf + self.mpc_offset_lf
         return self.servo_angles_deg
 
     def pid_correction(self, imu_data: ImuData) -> None:
         if imu_data.valid:
             self.pos_state.foot_target_pos_lf.rotate(imu_data.rot_mat)
+
+    def set_landing_target(self, corrected_pos_lf: Vec3) -> None:
+        self.pos_state.foot_target_pos_lf = corrected_pos_lf
+        self._move_leg()
 
     # ------------------------------------------------------------------
     # internals
@@ -159,18 +189,22 @@ class Leg:
         self.leg_state = state
 
     def _move_leg(self) -> None:
-        # flip y for right-side legs
-        target = self.pos_state.foot_target_pos_lf.copy()
-        target.y *= -1.0 if _is_right_leg(self.id) else 1.0
-
-        angles = IK.solve(
-            target=target,
-            body_coxa_x_mm=BODY_COXA_X_MM,
-            femur_length_mm=FEMUR_LENGTH_MM,
-            tibia_length_mm=TIBIA_LENGTH_MM,
-            c_min=c_min,
-            c_max=c_max,
-        )
+        # try the full MPC offset first; if IK says unreachable (which would leave the
+        # servos frozen at their old angles) retry with less offset, then none.
+        angles = None
+        for scale in (1.0, 0.5, 0.0):
+            target = (self.pos_state.foot_target_pos_lf + self.mpc_offset_lf * scale).copy()
+            target.y *= -1.0 if _is_right_leg(self.id) else 1.0  # flip y for right-side legs
+            angles = IK.solve(
+                target=target,
+                body_coxa_x_mm=BODY_COXA_X_MM,
+                femur_length_mm=FEMUR_LENGTH_MM,
+                tibia_length_mm=TIBIA_LENGTH_MM,
+                c_min=c_min,
+                c_max=c_max,
+            )
+            if angles is not None:
+                break
 
         if angles is not None:
             # flip angles for reverse-mounted servos (left side)
@@ -179,6 +213,8 @@ class Leg:
 
             # clamp to calibrated limits
             self.servo_angles_deg = clamp_to_limits(angles, self.id)
+        else:
+            print("ik failed")
 
         # print(f"leg {self.id}, coxa={angles.coxa}, femur={angles.femur}, tibia={angles.tibia}")
         # self.servo_angles_deg = angles
