@@ -1,4 +1,4 @@
-# mjpython python/scripts/urdfToXml.py
+# mjpython python/scripts/urdf_to_xml.py
 
 import mujoco
 

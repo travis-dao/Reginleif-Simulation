@@ -81,4 +81,4 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         if sleep > 0:
             time.sleep(sleep)
 
-# controller.export_angle_log([0])
+controller.export_angle_log([0])

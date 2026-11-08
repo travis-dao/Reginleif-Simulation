@@ -241,6 +241,7 @@ class Leg:
             row[f"real_coxa"] = self.servo_angles_deg.coxa
             row[f"real_femur"] = self.servo_angles_deg.femur
             row[f"real_tibia"] = self.servo_angles_deg.tibia
+            row[f"swinging"] = 1 if self.leg_state == LegState.SWING else 0
             self.angle_log.append(row)
         else:
             print("ik failed")
@@ -272,11 +273,12 @@ class Leg:
 
         alpha = _smoothstep(t)
         foot = self.pos_state.foot_target_pos_lf
+        dy = Movement.SWING_Y_OFFSET_MM * math.sin(math.pi * t) ** 0.50
+        foot.y = start.y + alpha * (target.y - start.y) + Offset.quadrant_sign[self.id].y * dy
         foot.x = start.x + alpha * (target.x - start.x)
-        foot.y = start.y + alpha * (target.y - start.y)
 
         # lift the foot above the start-to-target line
-        clearance = Movement.STEP_HEIGHT_MM * math.sin(math.pi * t)
+        clearance = Movement.STEP_HEIGHT_MM * math.sin(math.pi * t) ** 0.25
         foot.z = (start.z + t * (target.z - start.z)) + clearance
 
         if t >= 1.0:
