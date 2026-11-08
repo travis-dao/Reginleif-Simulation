@@ -229,13 +229,13 @@ class Core:
         ramp = min(1.0, self._t_engaged / self.ramp_s) if self.ramp_s > 0 else 1.0
         corr_w = foot_forces_to_positions(fw, self.gain * ramp, self.max_corr)
         # print(corr_w) # prints 0
-        print(
-            f"leg={i} "
-            f"force={forces[i]} "
-            f"nominal_share={share:.2f} "
-            f"force_deviation={f} "
-            f"offset={corr_w[i]}"
-        )
+        # print(
+        #     f"leg={i} "
+        #     f"force={forces[i]} "
+        #     f"nominal_share={share:.2f} "
+        #     f"force_deviation={f} "
+        #     f"offset={corr_w[i]}"
+        # )
         return [world_vector_to_leg_frame(c, yaw) for c in corr_w]
 
     

@@ -21,7 +21,7 @@ START_HEIGHT = 0.5
 HORIZON = 10
 MPC_DT = 0.03
 SETTLE_TIME_S = 1.5        # let the robot drop and stand on the kinematic gait before MPC engages
-MPC_GAIN = 1.0           # mm of foot offset per N. Set 0.0 to run the pure gait (isolates MPC from gait problems)
+MPC_GAIN = 0.9           # mm of foot offset per N. Set 0.0 to run the pure gait (isolates MPC from gait problems)
 SETTLE_VEL = 0.05          # ...and require the base to be (nearly) at rest
 
 build_sim_xml(SRC, DST, START_HEIGHT, KP, FORCE)

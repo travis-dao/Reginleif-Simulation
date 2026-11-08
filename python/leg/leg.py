@@ -278,7 +278,7 @@ class Leg:
         foot.x = start.x + alpha * (target.x - start.x)
 
         # lift the foot above the start-to-target line
-        clearance = Movement.STEP_HEIGHT_MM * math.sin(math.pi * t) ** 0.25
+        clearance = Movement.STEP_HEIGHT_MM * math.sin(math.pi * t) ** 0.5
         foot.z = (start.z + t * (target.z - start.z)) + clearance
 
         if t >= 1.0:

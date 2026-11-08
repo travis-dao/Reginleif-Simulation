@@ -68,7 +68,8 @@ class LegController:
         overwritten by the next trajectory tick and do not accumulate.
         """
         for leg, off in zip(self.legs, offsets_lf):
-            # print(off)
+            # if leg.id == 0:
+                # print(f"swing={self.swing_leg}, offset={off}")
             leg.set_mpc_offset(off)
 
     def foot_positions_body(self) -> List[Vec3]:

@@ -21,8 +21,8 @@ LEG_COLORS = {
     "tibia": ""
 }
 
-# JOINT_ANGLES = ["coxa", "femur", "tibia"]
-JOINT_ANGLES = ["femur", "tibia"]
+JOINT_ANGLES = ["coxa", "femur", "tibia"]
+# JOINT_ANGLES = ["femur"]
 REF = ["target", "real"]
 
 MAX_SAMPLES = 2000

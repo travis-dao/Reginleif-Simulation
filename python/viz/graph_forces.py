@@ -1,5 +1,5 @@
 # Run with:
-# python python/visualization/graph_forces.py
+# python python/viz/graph_forces.py
 
 import html
 import re
@@ -25,7 +25,7 @@ LEG_COLORS = {
 FORCE_SCALE = 0.005
 
 INTERVAL_MS = 30
-PLAYBACK_SPEED = 0.5  # 0.25 = quarter speed, 0.5 = half speed, 1.0 = normal
+PLAYBACK_SPEED = 0.25  # 0.25 = quarter speed, 0.5 = half speed, 1.0 = normal
 
 # Length of the body's forward-direction arrow, in metres.
 HEADING_LENGTH_M = 0.15
