@@ -148,9 +148,25 @@ class Leg:
 
     def start_stance(self, target_pos_lf: Vec3) -> None:
         self.pos_state.stance_start_pos_lf = self.pos_state.foot_target_pos_lf.copy()
-        self.pos_state.stance_target_pos_lf = target_pos_lf.copy()
+        self.pos_state.stance_target_pos_lf = (
+            target_pos_lf.copy() if target_pos_lf is not None else self.get_rear_pos()
+        )
         self.stance_phase = 0.0
         self._set_state(LegState.STANCE)
+
+    def get_state(self) -> LegState:
+        return self.leg_state
+
+    @staticmethod
+    def _stance_speed_mm_s() -> float:
+        # a foot is in stance for 3 swing periods (the other 3 legs' swings)
+        return Movement.STEP_LENGTH_MM / (3.0 * Movement.SWING_DURATION_S)
+
+    def get_rear_pos(self) -> Vec3:
+        """End-of-stance (rear) foot position, leg frame."""
+        p = Offset.neutral_foot_pos_lf[self.id].copy()
+        p.x -= Movement.STEP_LENGTH_MM / 2.0
+        return p
 
     def update(self, dt_s: float, imu_data: ImuData) -> Theta3:
         self.time_s += dt_s
@@ -180,10 +196,6 @@ class Leg:
     def pid_correction(self, imu_data: ImuData) -> None:
         if imu_data.valid:
             self.pos_state.foot_target_pos_lf.rotate(imu_data.rot_mat)
-
-    def set_landing_target(self, corrected_pos_lf: Vec3) -> None:
-        self.pos_state.foot_target_pos_lf = corrected_pos_lf
-        self._move_leg()
 
     def export_angle_log(self) -> None:
         path = Path(f"python/logs/leg{self.id}_trajectory_angles.csv")
@@ -250,18 +262,16 @@ class Leg:
         # self.servo_angles_deg = angles
 
     def _update_stance(self, dt_s: float) -> None:
-        self.stance_phase += dt_s / (Movement.SWING_DURATION_S * 3.0)
-        self.stance_phase = min(self.stance_phase, 1.0)
+        foot = self.pos_state.foot_target_pos_lf
+        rear_x = self.pos_state.stance_target_pos_lf.x
 
-        t = self.stance_phase
-        start = self.pos_state.stance_start_pos_lf
-        target = self.pos_state.stance_target_pos_lf
+        # constant-velocity slide toward the rear; stop (don't overshoot) at the limit
+        foot.x = max(foot.x - self._stance_speed_mm_s() * dt_s, rear_x)
 
-        alpha = _smoothstep(t)
-        self.pos_state.foot_target_pos_lf = start + (target - start) * alpha
-
-        if t >= 1.0:
-            self.pos_state.foot_target_pos_lf = target.copy()
+        # progress, for logging/debug only
+        start_x = self.pos_state.stance_start_pos_lf.x
+        span = start_x - rear_x
+        self.stance_phase = 1.0 if span <= 1e-6 else min((start_x - foot.x) / span, 1.0)
 
     def _update_swing(self, dt_s: float) -> None:
         self.swing_phase += dt_s / Movement.SWING_DURATION_S
@@ -273,9 +283,8 @@ class Leg:
 
         alpha = _smoothstep(t)
         foot = self.pos_state.foot_target_pos_lf
-        dy = Movement.SWING_Y_OFFSET_MM * math.sin(math.pi * t) ** 0.50
-        foot.y = start.y + alpha * (target.y - start.y) + Offset.quadrant_sign[self.id].y * dy
         foot.x = start.x + alpha * (target.x - start.x)
+        foot.y = start.y + alpha * (target.y - start.y)
 
         # lift the foot above the start-to-target line
         clearance = Movement.STEP_HEIGHT_MM * math.sin(math.pi * t) ** 0.5
@@ -283,6 +292,4 @@ class Leg:
 
         if t >= 1.0:
             self.pos_state.foot_target_pos_lf = target.copy()
-            end = self.pos_state.swing_start_pos_lf.copy()
-            end.x = Offset.neutral_foot_pos_lf[self.id].x - Movement.STEP_LENGTH_MM / 2.0
-            self.start_stance(end)
+            self.start_stance(self.get_rear_pos())

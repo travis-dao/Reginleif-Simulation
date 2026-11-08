@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from .leg import Leg
+from .leg import Leg, LegState
 from .leg_config import ImuData, Movement, Offset, Theta3, Vec3
 from .movement import LegDriver
 
@@ -30,6 +30,8 @@ class LegController:
         self.grounded = True
         self.swing_leg = -1
 
+        self.walking = False
+
     def init(self) -> None:
         for i in range(4):
             self.legs[i] = Leg(i)
@@ -45,15 +47,28 @@ class LegController:
             return 0.0
         return self.legs[self.swing_leg].swing_time_remaining_s()
 
+    def start_walk(self) -> None:
+        """Move every leg out of HOLD and into STANCE, then let the gait pick the swing leg."""
+        self.swing_leg = -1
+        self.walking = True
+        for leg in self.legs:
+            leg.start_stance(leg.get_rear_pos())
+
     def update(self, dt_s: float, imu_data: ImuData) -> None:
         # gait sequencing
         self.grounded = all(leg.is_grounded() for leg in self.legs)
 
         # only start next swing sequence if all legs are grounded
         if self.grounded:
+            if not self.walking:
+                self.start_walk()
             nxt = Movement.next_leg_gait[self.swing_leg + 1]
             self.swing_leg = nxt
             self.legs[nxt].start_swing(self.legs[nxt].get_nominal_landing_pos())
+
+
+            for i in range(4):
+                print(f"leg {i} state: {self.legs[i].get_state()}")
 
         # leg movement calculations
         for i in range(4):
