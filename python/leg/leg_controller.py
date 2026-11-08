@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from .leg import Leg, LegState
+from .leg import Leg
 from .leg_config import ImuData, Movement, Offset, Theta3, Vec3
 from .movement import LegDriver
 
@@ -66,9 +66,8 @@ class LegController:
             self.swing_leg = nxt
             self.legs[nxt].start_swing(self.legs[nxt].get_nominal_landing_pos())
 
-
-            for i in range(4):
-                print(f"leg {i} state: {self.legs[i].get_state()}")
+            # for i in range(4):
+            #     print(f"leg {i} state: {self.legs[i].get_state()}")
 
         # leg movement calculations
         for i in range(4):
@@ -101,3 +100,7 @@ class LegController:
     def export_angle_log(self, ids: List[int]=[0, 1, 2, 3]) -> None:
         for i in ids:
             self.legs[i].export_angle_log()
+
+    def export_pos_log(self, ids: List[int]=[0, 1, 2, 3]) -> None:
+        for i in ids:
+            self.legs[i].export_pos_log()

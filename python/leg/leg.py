@@ -84,7 +84,7 @@ def _smoothstep(t: float) -> float:
 
 
 class Leg:
-    MPC_OFFSET_TAU_S = 0.08  # low-pass time constant of the MPC foot offset
+    MPC_OFFSET_TAU_S = 0.05  # low-pass time constant of the MPC foot offset
 
     def __init__(self, leg_id: int):
         neutral = Offset.neutral_foot_pos_lf[leg_id]
@@ -111,6 +111,7 @@ class Leg:
         self._mpc_offset_cmd = Vec3(0.0, 0.0, 0.0)
 
         self.angle_log = []
+        self.foot_pos_log = []
         self.time_s = 0.0
 
         self._move_leg()
@@ -191,6 +192,7 @@ class Leg:
 
         # curr = where the foot really is (trajectory + MPC offset)
         self.pos_state.foot_curr_pos_lf = self.pos_state.foot_target_pos_lf + self.mpc_offset_lf
+        self._log_foot_pos()
         return self.servo_angles_deg
 
     def pid_correction(self, imu_data: ImuData) -> None:
@@ -213,6 +215,24 @@ class Leg:
             writer.writerows(self.angle_log)
 
         print(f"Recorded samples: {len(self.angle_log)}")
+        print(f"CSV saved to: {path.resolve()}")
+
+    def export_pos_log(self) -> None:
+        path = Path(f"python/logs/leg{self.id}_foot_pos.csv")
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not self.foot_pos_log:
+            print("No data samples recorded; CSV not written.")
+            return
+
+        fieldnames = list(self.foot_pos_log[0].keys())
+
+        with path.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(self.foot_pos_log)
+
+        print(f"Recorded samples: {len(self.foot_pos_log)}")
         print(f"CSV saved to: {path.resolve()}")
 
     # ------------------------------------------------------------------
@@ -260,6 +280,26 @@ class Leg:
 
         # print(f"leg {self.id}, coxa={angles.coxa}, femur={angles.femur}, tibia={angles.tibia}")
         # self.servo_angles_deg = angles
+
+    def _log_foot_pos(self):
+        row = {}
+        row[f"time_s"] = self.time_s
+        row[f"target_x"] = self.pos_state.foot_target_pos_lf.x
+        row[f"offset_x"] = self.mpc_offset_lf.x
+        row[f"final_x"] = self.pos_state.foot_curr_pos_lf.x
+
+        row[f"target_y"] = self.pos_state.foot_target_pos_lf.y
+        row[f"offset_y"] = self.mpc_offset_lf.y
+        row[f"final_y"] = self.pos_state.foot_curr_pos_lf.y
+
+        row[f"target_z"] = self.pos_state.foot_target_pos_lf.z
+        row[f"offset_z"] = self.mpc_offset_lf.z
+        row[f"final_z"] = self.pos_state.foot_curr_pos_lf.z
+        
+        row[f"swinging"] = 1 if self.leg_state == LegState.SWING else 0
+
+        self.foot_pos_log.append(row)
+        return
 
     def _update_stance(self, dt_s: float) -> None:
         foot = self.pos_state.foot_target_pos_lf

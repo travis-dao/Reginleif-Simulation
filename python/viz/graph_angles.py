@@ -15,12 +15,6 @@ from leg.leg_config import Movement
 
 CSV_PATH = Path("python/logs/leg0_trajectory_angles.csv")
 
-LEG_COLORS = {
-    "coxa": "",
-    "femur": "",
-    "tibia": ""
-}
-
 JOINT_ANGLES = ["coxa", "femur", "tibia"]
 # JOINT_ANGLES = ["femur"]
 REF = ["target", "real"]
