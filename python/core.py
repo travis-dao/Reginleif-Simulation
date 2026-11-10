@@ -17,6 +17,7 @@ import numpy as np
 
 from leg.leg_config import Movement, Vec3
 from leg.leg_controller import LegController
+from leg.leg import Leg
 from mpc.mpc import MPC, MPCProblem, MPCResult, State, NX, NUM_LEGS
 from mpc.util import (
     foot_forces_to_positions,
@@ -56,7 +57,10 @@ class Core:
             vx_des_mps if vx_des_mps is not None
             else Movement.STEP_LENGTH_MM * MM / (3.0 * Movement.SWING_DURATION_S)
         )
-        self.yaw_des = yaw_des          # None -> latch yaw on first step
+        self.vx_des = (
+            vx_des_mps if vx_des_mps is not None
+            else Leg._stance_speed_mm_s() * MM
+        )
         self.period = solve_period_s
         self.gain = gain_mm_per_n
         self.max_corr = max_corr_mm
@@ -198,22 +202,12 @@ class Core:
         return out
 
     def _contact_schedule(self) -> List[List[bool]]:
-        """Predicted stance/swing per step. Gait is one swing at a time, back to back:
-        current swing leg (for its remaining time), then the next leg in the gait table, ..."""
         N, dt = self.mpc.N, self.mpc.cfg.dt
-        T = Movement.SWING_DURATION_S
         contact = [[True] * NUM_LEGS for _ in range(N)]
-        leg = self.lc.get_swing_leg()
-        if leg < 0:
-            return contact
-        t0, t1 = 0.0, self.lc.swing_time_remaining_s()
-        while t0 < N * dt:
+        for leg, t0, t1 in self.lc.swing_schedule(N * dt):
             for k in range(N):
                 if t0 <= (k + 0.5) * dt < t1:
                     contact[k][leg] = False
-            leg = Movement.next_leg_gait[leg + 1]
-            t0, t1 = t1, t1 + T
-        # print(contact)
         return contact
 
     def _foot_rel_pos(self, s0: State, x_ref, contact) -> List[np.ndarray]:

@@ -29,6 +29,8 @@ class LegController:
 
         self.grounded = True
         self.swing_leg = -1
+        self._last_swing_leg = -1
+        self.gap_remaining_s = 0.0
 
         self.walking = False
 
@@ -55,24 +57,47 @@ class LegController:
             leg.start_stance(leg.get_rear_pos())
 
     def update(self, dt_s: float, imu_data: ImuData) -> None:
-        # gait sequencing
-        self.grounded = all(leg.is_grounded() for leg in self.legs)
+        grounded = all(leg.is_grounded() for leg in self.legs)
 
-        # only start next swing sequence if all legs are grounded
+        # a swing just finished: open the all-stance gap
+        if grounded and not self.grounded:
+            self.swing_leg = -1
+            self.gap_remaining_s = Leg.GAP_DURATION_S
+        self.grounded = grounded
+
         if self.grounded:
             if not self.walking:
                 self.start_walk()
-            nxt = Movement.next_leg_gait[self.swing_leg + 1]
-            self.swing_leg = nxt
-            self.legs[nxt].start_swing(self.legs[nxt].get_nominal_landing_pos())
+                self.gap_remaining_s = 0.0      # first swing starts immediately
+            self.gap_remaining_s -= dt_s
+            if self.gap_remaining_s <= 0.0:
+                nxt = Movement.next_leg_gait[self._last_swing_leg + 1]
+                self._last_swing_leg = nxt
+                self.swing_leg = nxt
+                self.legs[nxt].start_swing(self.legs[nxt].get_nominal_landing_pos())
 
-            # for i in range(4):
-            #     print(f"leg {i} state: {self.legs[i].get_state()}")
-
-        # leg movement calculations
         for i in range(4):
             self.target_angles[i] = self.legs[i].update(dt_s, imu_data)
             self.driver.set_angles(i, self.target_angles[i])
+    
+    def swing_schedule(self, horizon_s: float):
+        """[(leg, t_start, t_end)] of predicted swings, seconds from now, including gaps."""
+        if not self.walking:
+            return []
+        T, G = Movement.SWING_DURATION_S, Leg.GAP_DURATION_S
+        out = []
+        if self.swing_leg >= 0:
+            t_end = self.swing_time_remaining_s()
+            out.append((self.swing_leg, 0.0, t_end))
+            t_next = t_end + G
+        else:
+            t_next = max(self.gap_remaining_s, 0.0)
+        last = self._last_swing_leg
+        while t_next < horizon_s:
+            last = Movement.next_leg_gait[last + 1]
+            out.append((last, t_next, t_next + T))
+            t_next += T + G
+        return out
 
     def apply_mpc_corrections(self, offsets_lf: List[Vec3]) -> None:
         """Hand each leg its MPC foot OFFSET (leg frame, mm).
