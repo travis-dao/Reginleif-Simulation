@@ -202,6 +202,12 @@ class MPC:
         self.U_sol = np.zeros(NU * N)
         self.U_prev = np.zeros(NU * N)
 
+        # W = weight, D = difference
+        W = 1e-2  # tune: 1e-4 .. 1e-2
+        D = np.eye(NU * N) - np.eye(NU * N, k=-NU)   # (DU)_k = u_k - u_{k-1}
+        self.DtWD = W * D.T @ D
+        self.DtW = W * D.T
+
         # OSQP state (one-time setup)
         self._C_sp = sp.csc_matrix(self.C)
         self._triu_idx = np.triu_indices(NU * N)  # fixed sparsity pattern for P (upper triangle)
@@ -257,6 +263,11 @@ class MPC:
         self.q = 2.0 * BtL @ err
         self.H = 2.0 * BtL @ self.B_qp
         self.H[np.diag_indices_from(self.H)] += 2.0 * self.K_diag
+
+        d0 = np.zeros(NU * self.N)
+        d0[:NU] = self.U_prev[:NU]           # last applied u0 (zero if that leg was in swing)
+        self.H += 2.0 * self.DtWD
+        self.q -= 2.0 * self.DtW @ d0
 
     # -- 4: lb <= C U <= ub --------------------------------------------------
     def build_constraints(self, p: MPCProblem) -> None:

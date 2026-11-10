@@ -1,7 +1,9 @@
 """Glue between LegController (mm, body frame, leg-by-leg gait) and MPC (m, N, world frame).
 
 Per control tick:
-    bridge.step(dt, model, data, body_id)   # read state -> solve MPC -> push foot offsets
+    imu = make_imu(model, data, body_id)    # sim only: MuJoCo stands in for the IMU
+    s = core.estimate(dt, imu)              # state estimator (Kalman filter), EVERY tick
+    core.step(dt, data.time)                # solve MPC (every solve_period) -> push foot offsets
     leg_ctrl.update(dt, imu)                # gait + offsets -> servo angles
     leg_ctrl.update_model_angles()
 """
@@ -18,10 +20,11 @@ from leg.leg_controller import LegController
 from mpc.mpc import MPC, MPCProblem, MPCResult, State, NX, NUM_LEGS
 from mpc.util import (
     foot_forces_to_positions,
-    read_state,
     rotation_matrix_yaw,
     world_vector_to_leg_frame,
 )
+
+from state_estimator import StateEstimator, EstimatorConfig, ImuData
 
 MM = 1e-3
 
@@ -43,6 +46,7 @@ class Core:
         gain_mm_per_n: float = 0.15,
         max_corr_mm: float = 12.0,
         ramp_s: float = 2.0,
+        gravity_z_mps2: float = -9.81,
     ):
         self.mpc = mpc
         self.lc = leg_ctrl
@@ -66,15 +70,40 @@ class Core:
         self.force_log = []
         self.force_csv_path = Path("python/logs/mpc_ground_forces.csv")
 
+        # State estimation lives in the motion subsystem: pos / linear_vel are estimated from
+        # leg kinematics + the gait's swing leg; orientation / gyro come from the IMU.
+        self.estimator = StateEstimator(EstimatorConfig(
+            foot_rel_body_fn=self._foot_rel_body_m,
+            swing_leg_fn=self.lc.get_swing_leg,
+            gravity_z=gravity_z_mps2,
+        ))
+        self.state: State = self.estimator.state
+
     # ------------------------------------------------------------------
-    def step(self, dt_s: float, model, data, body_id: int) -> Optional[MPCResult]:
+    def reset(self, p0: np.ndarray, v0: np.ndarray, imu: ImuData) -> None:
+        """Init the estimator at a known pose (sim: spawn pose; hardware: zeros / neutral)."""
+        self.estimator.reset(p0, v0, imu)
+
+    def estimate(self, dt_s: float, imu: ImuData) -> State:
+        """Estimator tick. Call EVERY control tick (also before the MPC engages), not just on
+        MPC solves, so the foot velocities and contact trust stay current."""
+        self.state = self.estimator.update(dt_s, imu)
+        return self.state
+
+    def _foot_rel_body_m(self) -> np.ndarray:
+        """Foot positions in the body frame, (4, 3) in metres (the estimator's FK input)."""
+        return np.array([_v_m(p) for p in self.lc.foot_positions_body()])
+
+    # ------------------------------------------------------------------
+    def step(self, dt_s: float, time_s: float) -> Optional[MPCResult]:
+        """MPC tick; solves from the latest estimate() every solve_period."""
         self._t_since += dt_s
         self._t_engaged += dt_s
         if self._t_since < self.period:
             return self.last_result
         self._t_since = 0.0
 
-        s0 = read_state(model, data, body_id)
+        s0 = self.state
         feet_world = self._foot_positions_world(s0)
 
         if self.yaw_des is None:
@@ -102,7 +131,7 @@ class Core:
 
             # One row per successful MPC solve.
             row = {
-                "time_s": float(data.time),
+                "time_s": float(time_s),
                 "swing_leg": swing_name,
                 "swing_leg_id": int(swing_leg),
                 "yaw_rad": float(s0.yaw),
@@ -184,6 +213,7 @@ class Core:
                     contact[k][leg] = False
             leg = Movement.next_leg_gait[leg + 1]
             t0, t1 = t1, t1 + T
+        # print(contact)
         return contact
 
     def _foot_rel_pos(self, s0: State, x_ref, contact) -> List[np.ndarray]:

@@ -1,371 +1,163 @@
 # Run with:
 # python python/viz/graph_forces.py
 
-import html
-import re
+import sys
 from pathlib import Path
+import argparse
+
+# Add the python/ directory to the module search path.
+PYTHON_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PYTHON_DIR))
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 
 CSV_PATH = Path("python/logs/mpc_ground_forces.csv")
 
 LEGS = ["FL", "FR", "BR", "BL"]
 
-LEG_COLORS = {
+COLORS = {
     "FL": "tab:blue",
     "FR": "tab:orange",
     "BR": "tab:green",
     "BL": "tab:red",
 }
 
-# Force-arrow length in metres per newton.
-FORCE_SCALE = 0.005
 
-INTERVAL_MS = 30
-PLAYBACK_SPEED = 0.25  # 0.25 = quarter speed, 0.5 = half speed, 1.0 = normal
+def plot_leg_z_forces(csv_path: str, selected_legs: list[str]) -> None:
+    df = pd.read_csv(csv_path)
 
-# Length of the body's forward-direction arrow, in metres.
-HEADING_LENGTH_M = 0.15
+    time = df["time_s"]
+    swing_leg = df["swing_leg"]
+    t = time.to_numpy()
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # Determine plot boundaries.
+    if len(t) > 1:
+        left_edge = t[0] - (t[1] - t[0]) / 2
+        right_edge = t[-1] + (t[-1] - t[-2]) / 2
+    else:
+        left_edge = t[0] - 0.01
+        right_edge = t[0] + 0.01
+
+    # Shade each interval according to the swinging leg.
+    start_idx = 0
+
+    for i in range(1, len(df) + 1):
+        changed = (
+            i == len(df)
+            or swing_leg.iloc[i] != swing_leg.iloc[start_idx]
+        )
+
+        if not changed:
+            continue
+
+        start_time = (
+            left_edge
+            if start_idx == 0
+            else (t[start_idx - 1] + t[start_idx]) / 2
+        )
+
+        end_time = (
+            right_edge
+            if i == len(df)
+            else (t[i - 1] + t[i]) / 2
+        )
+
+        leg = swing_leg.iloc[start_idx]
+
+        ax.axvspan(
+            start_time,
+            end_time,
+            color=COLORS.get(leg, "gray"),
+            alpha=0.12,
+            label=f"{leg} swinging",
+        )
+
+        start_idx = i
+
+    # Plot only the requested legs.
+    for leg in selected_legs:
+        force_col = f"{leg}_Fz_N"
+
+        if force_col not in df.columns:
+            raise ValueError(f"Missing CSV column: {force_col}")
+
+        ax.plot(
+            time,
+            df[force_col],
+            color=COLORS[leg],
+            linewidth=1.8,
+            label=f"{leg} $F_z$",
+        )
+
+    ax.set_title("Vertical Force of Each Leg Over Time")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Vertical Force $F_z$ (N)")
+    ax.grid(True, alpha=0.3)
+
+    # Remove duplicate legend labels.
+    handles, labels = ax.get_legend_handles_labels()
+    unique = dict(zip(labels, handles))
+    ax.legend(unique.values(), unique.keys(), ncol=3)
+
+    fig.tight_layout()
+    plt.show()
 
 
-def clean(value):
-    value = html.unescape(str(value)).strip()
-    return re.sub(r"^\*+", "", value).strip()
+def plot_total_z_force(csv_path):
+    """Plot the sum of all four legs' vertical forces over time."""
+    import pandas as pd
+    import matplotlib.pyplot as plt
 
+    df = pd.read_csv(csv_path)
 
-# ------------------------------------------------------------
-# Read and clean CSV
-# ------------------------------------------------------------
+    # Ensure the force columns are numeric.
+    legs = ["FL", "FR", "BR", "BL"]
+    force_cols = [f"{leg}_Fz_N" for leg in legs]
 
-df = pd.read_csv(CSV_PATH, dtype=str)
-df.columns = [clean(c) for c in df.columns]
-
-for col in df.columns:
-    df[col] = df[col].map(clean)
-
-# Remove repeated header rows, if present.
-df = df[df["time_s"] != "time_s"].copy()
-
-for col in df.columns:
-    if col != "swing_leg":
+    for col in force_cols:
+        if col not in df.columns:
+            raise ValueError(f"Missing required column: {col}")
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
-required = [
-    "time_s",
-    "com_x_m",
-    "com_y_m",
-    "com_z_m",
-    "swing_leg",
-]
+    time = pd.to_numeric(df["time_s"], errors="coerce")
+    total_fz = df[force_cols].sum(axis=1, min_count=4)
 
-for leg in LEGS:
-    required += [
-        f"{leg}_x_m",
-        f"{leg}_y_m",
-        f"{leg}_z_m",
-        f"{leg}_Fx_N",
-        f"{leg}_Fy_N",
-        f"{leg}_Fz_N",
-    ]
+    fig, ax = plt.subplots(figsize=(12, 5))
+    ax.plot(time, total_fz, color="black", linewidth=1.8,
+            label="Total Fz")
 
-missing = [col for col in required if col not in df.columns]
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Sum of vertical forces (N)")
+    ax.set_title("Total Vertical Force of All Legs vs. Time")
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    fig.tight_layout()
+    plt.show()
 
-if missing:
-    raise ValueError(
-        "CSV is missing columns: "
-        + ", ".join(missing)
-        + "\nRegenerate the CSV using the updated Core.step()."
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Plot vertical forces for selected robot legs."
     )
 
-# Yaw is optional, but is required to display body orientation.
-has_yaw = "yaw_rad" in df.columns
-
-if has_yaw:
-    df["yaw_rad"] = pd.to_numeric(df["yaw_rad"], errors="coerce")
-
-df = df.dropna(subset=required).sort_values("time_s")
-df = df.reset_index(drop=True)
-
-if df.empty:
-    raise ValueError("No valid samples found in CSV.")
-
-if has_yaw and df["yaw_rad"].isna().any():
-    print("Warning: Some yaw values are invalid; heading may be unavailable.")
-
-if not has_yaw:
-    print(
-        "Warning: CSV has no yaw_rad column. "
-        "The body's forward direction cannot be displayed.\n"
-        'Add "yaw_rad": float(s0.yaw) to the logged row in core.py '
-        "and regenerate the CSV."
+    parser.add_argument(
+        "csv_path",
+        nargs="?",
+        default="python/logs/mpc_ground_forces.csv",
+        help="Path to the robot CSV log (default: robot_log.csv)",
     )
 
-# ------------------------------------------------------------
-# Extract data
-# ------------------------------------------------------------
-
-# Shape: (frames, legs, xyz)
-positions = np.stack(
-    [
-        df[[f"{leg}_{axis}_m" for axis in ["x", "y", "z"]]]
-        .to_numpy(dtype=float)
-        for leg in LEGS
-    ],
-    axis=1,
-)
-
-forces = np.stack(
-    [
-        df[[f"{leg}_F{axis}_N" for axis in ["x", "y", "z"]]]
-        .to_numpy(dtype=float)
-        for leg in LEGS
-    ],
-    axis=1,
-)
-
-times = df["time_s"].to_numpy(dtype=float)
-swing_legs = df["swing_leg"].astype(str).str.upper().to_numpy()
-
-com_positions = df[
-    ["com_x_m", "com_y_m", "com_z_m"]
-].to_numpy(dtype=float)
-
-# print("CoM start:", com_positions[0])
-# print("CoM end:  ", com_positions[-1])
-# if has_yaw:
-#     print("Yaw range (deg):", np.degrees(df["yaw_rad"].min()), np.degrees(df["yaw_rad"].max()))
-
-# # Foot positions relative to CoM, over time
-# rel = positions - com_positions[:, None, :]
-# print("Foot-minus-CoM range per axis:", rel.min(axis=(0, 1)), rel.max(axis=(0, 1)))
-
-# # Print total commanded foot displacement.
-# print("\nNet commanded foot displacement:")
-
-# for i, leg in enumerate(LEGS):
-#     delta = positions[-1, i] - positions[0, i]
-
-#     print(
-#         f"{leg}: "
-#         f"dx={delta[0]:+.4f} m, "
-#         f"dy={delta[1]:+.4f} m, "
-#         f"dz={delta[2]:+.4f} m"
-#     )
-
-# body_delta = com_positions[-1] - com_positions[0]
-
-# print(
-#     "\nBody/CoM displacement: "
-#     f"dx={body_delta[0]:+.4f} m, "
-#     f"dy={body_delta[1]:+.4f} m, "
-#     f"dz={body_delta[2]:+.4f} m"
-# )
-
-# ------------------------------------------------------------
-# Figure and fixed axes
-# ------------------------------------------------------------
-
-# Include both feet and the body when calculating axis limits.
-all_points = np.concatenate(
-    [positions.reshape(-1, 3), com_positions],
-    axis=0,
-)
-
-lo = all_points.min(axis=0)
-hi = all_points.max(axis=0)
-
-center = (lo + hi) / 2
-span = max(float(np.max(hi - lo)), 0.25)
-half = span * 0.8
-
-fig = plt.figure(figsize=(10, 8))
-ax = fig.add_subplot(111, projection="3d")
-
-ax.set_xlim(center[0] - half, center[0] + half)
-ax.set_ylim(center[1] - half, center[1] + half)
-ax.set_zlim(
-    min(0.0, center[2] - half),
-    center[2] + half,
-)
-
-ax.set_xlabel("World X (m)")
-ax.set_ylabel("World Y (m)")
-ax.set_zlabel("World Z (m)")
-ax.set_title("Quadruped Ground Reaction Forces")
-
-# Keep the world axes visually equally scaled.
-ax.set_box_aspect((1, 1, 1))
-
-# Ground reference plane.
-xx, yy = np.meshgrid(
-    [center[0] - half, center[0] + half],
-    [center[1] - half, center[1] + half],
-)
-
-ax.plot_surface(
-    xx,
-    yy,
-    np.zeros_like(xx),
-    alpha=0.08,
-)
-
-# ------------------------------------------------------------
-# Animation artists
-# ------------------------------------------------------------
-
-com_marker, = ax.plot(
-    [], [], [],
-    "ko",
-    markersize=7,
-    label="Body CoM",
-)
-
-foot_markers = []
-foot_labels = []
-body_lines = []
-
-for leg in LEGS:
-    marker, = ax.plot(
-        [], [], [],
-        "o",
-        color=LEG_COLORS[leg],
-        markersize=7,
-    )
-    foot_markers.append(marker)
-
-    label = ax.text(0, 0, 0, leg)
-    foot_labels.append(label)
-
-    line, = ax.plot(
-        [], [], [],
-        color=LEG_COLORS[leg],
-        alpha=0.45,
-        linewidth=1.5,
-    )
-    body_lines.append(line)
-
-force_arrows = []
-body_heading = None
-
-title = ax.set_title("")
-
-
-def update(frame):
-    global force_arrows, body_heading
-
-    # Remove force arrows from the previous frame.
-    for arrow in force_arrows:
-        arrow.remove()
-
-    force_arrows = []
-
-    # Remove the previous body-heading arrow.
-    if body_heading is not None:
-        body_heading.remove()
-        body_heading = None
-
-    p = positions[frame]
-    f = forces[frame]
-    com = com_positions[frame]
-
-    # Update body marker.
-    com_marker.set_data([com[0]], [com[1]])
-    com_marker.set_3d_properties([com[2]])
-
-    # Show the body's forward direction.
-    # Assumption: body-forward is local +X, and yaw is a
-    # conventional rotation about world Z.
-    if has_yaw:
-        yaw = df.loc[frame, "yaw_rad"]
-
-        if np.isfinite(yaw):
-            hx = HEADING_LENGTH_M * np.cos(yaw)
-            hy = HEADING_LENGTH_M * np.sin(yaw)
-
-            body_heading = ax.quiver(
-                com[0],
-                com[1],
-                com[2],
-                hx,
-                hy,
-                0.0,
-                color="black",
-                linewidth=2.5,
-                arrow_length_ratio=0.2,
-            )
-
-    for i, leg in enumerate(LEGS):
-        x, y, z = p[i]
-        fx, fy, fz = f[i]
-
-        # Foot marker.
-        foot_markers[i].set_data([x], [y])
-        foot_markers[i].set_3d_properties([z])
-
-        # Foot label.
-        foot_labels[i].set_position((x, y))
-        foot_labels[i].set_3d_properties(z, zdir="z")
-
-        # Line from body CoM to commanded foot position.
-        body_lines[i].set_data(
-            [com[0], x],
-            [com[1], y],
-        )
-        body_lines[i].set_3d_properties([com[2], z])
-
-        # Force arrow starts at the foot and points along
-        # the logged world-frame force vector.
-        arrow = ax.quiver(
-            x,
-            y,
-            z,
-            fx * FORCE_SCALE,
-            fy * FORCE_SCALE,
-            fz * FORCE_SCALE,
-            color=LEG_COLORS[leg],
-            linewidth=2,
-            arrow_length_ratio=0.2,
-        )
-
-        force_arrows.append(arrow)
-
-    swing = swing_legs[frame]
-
-    heading_text = ""
-
-    if has_yaw and np.isfinite(df.loc[frame, "yaw_rad"]):
-        yaw = df.loc[frame, "yaw_rad"]
-        heading_text = f" | Yaw: {np.degrees(yaw):.1f} deg"
-
-    title.set_text(
-        f"t = {times[frame]:.3f} s | "
-        f"Airborne leg: {swing} | "
-        f"Force scale: {FORCE_SCALE:g} m/N"
-        f"{heading_text}"
+    parser.add_argument(
+        "--legs",
+        nargs="+",
+        choices=LEGS,
+        default=LEGS,
+        help="Legs to plot: FL FR BR BL (default: all legs)",
     )
 
-    return (
-        [com_marker, *foot_markers, *foot_labels, *body_lines, title]
-    )
-
-
-ani = FuncAnimation(
-    fig,
-    update,
-    frames=len(df),
-    interval=INTERVAL_MS / PLAYBACK_SPEED,
-    blit=False,
-    repeat=False,
-)
-
-# ani.save("quadruped_forces.gif", writer="pillow", fps=30)
-
-plt.tight_layout()
-plt.show()
-
-# Optional export:
-# ani.save("quadruped_forces.gif", writer="pillow", fps=30)
-# ani.save("quadruped_forces.mp4", writer="ffmpeg", fps=30)
+    args = parser.parse_args()
+    plot_leg_z_forces(args.csv_path, args.legs)
+    plot_total_z_force(args.csv_path)
