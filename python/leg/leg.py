@@ -84,9 +84,7 @@ def _smoothstep(t: float) -> float:
 
 
 class Leg:
-    MPC_OFFSET_TAU_S = 0.05  # low-pass time constant of the MPC foot offset
-    GAP_DURATION_S = 0.1
-
+    MPC_OFFSET_TAU_S = 0.025  # low-pass time constant of the MPC foot offset
 
     def __init__(self, leg_id: int):
         neutral = Offset.neutral_foot_pos_lf[leg_id]
@@ -163,7 +161,7 @@ class Leg:
     @staticmethod
     def _stance_speed_mm_s() -> float:
         # a foot is in stance for 3 swing periods (the other 3 legs' swings)
-        return Movement.STEP_LENGTH_MM / (3.0 * Movement.SWING_DURATION_S + 4.0 * Leg.GAP_DURATION_S)
+        return Movement.STEP_LENGTH_MM / (3.0 * Movement.SWING_DURATION_S + 4.0 * Movement.GAP_DURATION_S)
 
     def get_rear_pos(self) -> Vec3:
         """End-of-stance (rear) foot position, leg frame."""

@@ -62,7 +62,7 @@ class LegController:
         # a swing just finished: open the all-stance gap
         if grounded and not self.grounded:
             self.swing_leg = -1
-            self.gap_remaining_s = Leg.GAP_DURATION_S
+            self.gap_remaining_s = Movement.GAP_DURATION_S
         self.grounded = grounded
 
         if self.grounded:
@@ -84,7 +84,7 @@ class LegController:
         """[(leg, t_start, t_end)] of predicted swings, seconds from now, including gaps."""
         if not self.walking:
             return []
-        T, G = Movement.SWING_DURATION_S, Leg.GAP_DURATION_S
+        T, G = Movement.SWING_DURATION_S, Movement.GAP_DURATION_S
         out = []
         if self.swing_leg >= 0:
             t_end = self.swing_time_remaining_s()

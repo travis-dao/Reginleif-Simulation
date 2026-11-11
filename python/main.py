@@ -20,7 +20,7 @@ START_HEIGHT = 0.5
 
 HORIZON = 10
 MPC_DT = 0.03
-SETTLE_TIME_S = 0.5       # let the robot drop and stand on the kinematic gait before MPC engages
+SETTLE_TIME_S = 0.25       # let the robot drop and stand on the kinematic gait before MPC engages
 MPC_GAIN = 1.3            # mm of foot offset per N. Set 0.0 to run the pure gait (isolates MPC from gait problems)
 SETTLE_VEL = 0.1          # ...and require the base to be (nearly) at rest
 
@@ -124,5 +124,5 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         if sleep > 0:
             time.sleep(sleep)
 
-# core.export_force_log()
+core.export_force_log()
 # controller.export_pos_log([0])
