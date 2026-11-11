@@ -30,9 +30,10 @@ from .movement import IK
 from .limits import ServoLimit, ServoConfig, LegServoLimits
 
 class LegState(Enum):
-    HOLD = auto()
+    HOLD = auto()     # initial pose: foot pinned to neutral
     SWING = auto()
     STANCE = auto()
+    PAUSE = auto()    # NEW: foot frozen wherever it is (gait idle)
 
 
 @dataclass
@@ -155,6 +156,16 @@ class Leg:
         self.stance_phase = 0.0
         self._set_state(LegState.STANCE)
 
+    def hold(self) -> None:
+        """Freeze the trajectory at the current foot target (gait idle)."""
+        if self.leg_state == LegState.SWING:
+            return                                 # never freeze mid-swing
+        self._set_state(LegState.PAUSE)
+
+    def resume_stance(self) -> None:
+        """Continue the stance sweep from the frozen position toward the rear limit."""
+        self.start_stance(self.get_rear_pos())
+
     def get_state(self) -> LegState:
         return self.leg_state
 
@@ -177,8 +188,9 @@ class Leg:
         elif self.leg_state == LegState.STANCE:
             self._update_stance(dt_s)
             # self.pid_correction(imu_data)
-        else:
-            # TODO: CHANGE LATER (from original)
+        elif self.leg_state == LegState.PAUSE:
+            pass                                   # keep foot_target_pos_lf as is
+        else:                                      # HOLD
             self.pos_state.foot_target_pos_lf = Offset.neutral_foot_pos_lf[self.id].copy()
 
         # low-pass the MPC offset; swing legs carry no ground force -> decay to 0

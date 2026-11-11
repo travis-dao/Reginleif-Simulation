@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import List, Optional
 import csv
 from pathlib import Path
+from enum import Enum, auto
 
 import numpy as np
 
@@ -28,12 +29,13 @@ from mpc.util import (
 from state_estimator import StateEstimator, EstimatorConfig, ImuData
 
 MM = 1e-3
-
-
 def _v_m(v: Vec3) -> np.ndarray:
     """Vec3 in mm -> ndarray in m."""
     return np.array([v.x, v.y, v.z]) * MM
 
+class Mode(Enum):
+    STAND = auto()   # lc IDLE, holding position
+    WALK = auto()    # lc WALKING or STOPPING
 
 class Core:
     def __init__(
@@ -44,7 +46,7 @@ class Core:
         vx_des_mps: Optional[float] = None,
         yaw_des: Optional[float] = None,
         solve_period_s: float = 0.03,
-        gain_mm_per_n: float = 0.15,
+        gain_mm_per_n: float = 1.0,
         max_corr_mm: float = 12.0,
         ramp_s: float = 2.0,
         gravity_z_mps2: float = -9.81,
@@ -62,6 +64,10 @@ class Core:
         self.max_corr = max_corr_mm
         self.ramp_s = ramp_s            # gain fades 0 -> full after engage
         self._t_engaged = 0.0
+
+        self.vx_cmd = 0.0
+        self.mode = Mode.STAND
+        self._hold_xy = None
 
         self._offsets: List[Vec3] = [Vec3(0.0, 0.0, 0.0) for _ in range(NUM_LEGS)]
         self._t_since = 1e9
@@ -104,6 +110,7 @@ class Core:
         self._t_since = 0.0
 
         s0 = self.state
+        self._update_mode(s0)
         feet_world = self._foot_positions_world(s0)
 
         if self.yaw_des is None:
@@ -181,19 +188,31 @@ class Core:
 
     # ------------------------------------------------------------------
     def _reference(self, s0: State) -> List[np.ndarray]:
-        """Constant-velocity reference at steps 1..N: level body, fixed height, forward speed."""
-        dt = self.mpc.cfg.dt
+        """Reference at steps 1..N.
+        WALK: advance at the speed the legs are actually sweeping (0 once the gait is IDLE).
+        STAND: hold the latched (x, y)."""
+        dt, N = self.mpc.cfg.dt, self.mpc.N
         yaw = self.yaw_des
-        v_w = rotation_matrix_yaw(yaw) @ np.array([self.vx_des, 0.0, 0.0])
+
+        if self.mode is Mode.WALK:
+            v = self.lc.stance_speed_mm_s() * MM          # 0 when the gait is IDLE
+            v_w = rotation_matrix_yaw(yaw) @ np.array([v, 0.0, 0.0])
+            p0 = s0.pos.copy()
+        else:                                              # STAND
+            v_w = np.zeros(3)
+            p0 = s0.pos.copy()
+            if self._hold_xy is not None:
+                p0[:2] = self._hold_xy
+
         out = []
-        for k in range(self.mpc.N):
+        for k in range(N):
             x = np.zeros(NX)
             x[2] = yaw
-            pos = s0.pos + v_w * (k + 1) * dt
-            pos[2] = self.z_des # TODO ??
+            pos = p0 + v_w * (k + 1) * dt
+            pos[2] = self.z_des
             x[3:6] = pos
             x[9:12] = v_w
-            x[12] = s0.g          # gravity slot must equal State.g
+            x[12] = s0.g                                   # gravity slot must equal State.g
             out.append(x)
         return out
 
@@ -268,3 +287,17 @@ class Core:
             s0.pos + R @ _v_m(foot)
             for foot in feet_body
         ], dtype=float)
+
+    def _update_mode(self, s0):
+        lc = self.lc
+        if self._hold_xy is None:
+            self._hold_xy = s0.pos[:2].copy()
+
+        if self.vx_cmd > 0:
+            lc.request_start()          # no-op if already WALKING; cancels a pending stop
+            self.mode = Mode.WALK
+        else:
+            lc.request_stop()           # finishes the swing in flight, never interrupts it
+            if self.mode is Mode.WALK and lc.is_idle():
+                self._hold_xy = s0.pos[:2].copy()   # latch where we ended up
+                self.mode = Mode.STAND

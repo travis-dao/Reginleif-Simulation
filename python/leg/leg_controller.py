@@ -6,8 +6,15 @@ from typing import List, Optional
 from .leg import Leg
 from .leg_config import ImuData, Movement, Offset, Theta3, Vec3
 from .movement import LegDriver
+from enum import Enum, auto
 
 NUM_SERVOS = 12
+
+
+class GaitState(Enum):
+    IDLE = auto()       # all feet planted, stance sweep frozen, no swings scheduled
+    WALKING = auto()    # normal crawl: swing, gap, swing, ...
+    STOPPING = auto()   # stop requested: finish any swing in flight, then IDLE at the next gap
 
 
 def leg_to_body_frame(leg: int, foot_pos_lf: Vec3) -> Vec3:
@@ -32,11 +39,43 @@ class LegController:
         self._last_swing_leg = -1
         self.gap_remaining_s = 0.0
 
-        self.walking = False
+        self.state = GaitState.IDLE
 
     def init(self) -> None:
         for i in range(4):
             self.legs[i] = Leg(i)
+
+    # commands
+    def request_start(self) -> None:
+        if self.state in (GaitState.IDLE, GaitState.STOPPING):
+            self._set_state(GaitState.WALKING)
+
+    def request_stop(self) -> None:
+        if self.state is GaitState.WALKING:
+            self._set_state(GaitState.STOPPING)
+
+    def is_idle(self) -> bool:
+        return self.state is GaitState.IDLE
+
+    def next_swing_leg(self) -> int:
+        return Movement.next_leg_gait[self._last_swing_leg + 1]
+
+    def stance_speed_mm_s(self) -> float:
+        return 0.0 if self.state is GaitState.IDLE else Leg._stance_speed_mm_s()
+
+    # transitions
+    def _set_state(self, new: GaitState) -> None:
+        old, self.state = self.state, new
+
+        if old is GaitState.IDLE and new is GaitState.WALKING:
+            for leg in self.legs:
+                leg.resume_stance()
+            self.gap_remaining_s = 0.0               # first swing starts immediately
+
+        elif new is GaitState.IDLE:
+            self.swing_leg = -1
+            for leg in self.legs:
+                leg.hold()                           # NEW in Leg: freeze at current pos
 
     def is_grounded(self) -> bool:
         return self.grounded
@@ -49,40 +88,30 @@ class LegController:
             return 0.0
         return self.legs[self.swing_leg].swing_time_remaining_s()
 
-    def start_walk(self) -> None:
-        """Move every leg out of HOLD and into STANCE, then let the gait pick the swing leg."""
-        self.swing_leg = -1
-        self.walking = True
-        for leg in self.legs:
-            leg.start_stance(leg.get_rear_pos())
-
     def update(self, dt_s: float, imu_data: ImuData) -> None:
         grounded = all(leg.is_grounded() for leg in self.legs)
-
-        # a swing just finished: open the all-stance gap
         if grounded and not self.grounded:
             self.swing_leg = -1
             self.gap_remaining_s = Movement.GAP_DURATION_S
         self.grounded = grounded
 
-        if self.grounded:
-            if not self.walking:
-                self.start_walk()
-                self.gap_remaining_s = 0.0      # first swing starts immediately
+        if self.grounded and self.state is not GaitState.IDLE:
             self.gap_remaining_s -= dt_s
             if self.gap_remaining_s <= 0.0:
-                nxt = Movement.next_leg_gait[self._last_swing_leg + 1]
-                self._last_swing_leg = nxt
-                self.swing_leg = nxt
-                self.legs[nxt].start_swing(self.legs[nxt].get_nominal_landing_pos())
+                if self.state is GaitState.WALKING:
+                    next = self.next_swing_leg()
+                    self._last_swing_leg = next
+                    self.swing_leg = next
+                    self.legs[next].start_swing(self.legs[next].get_nominal_landing_pos())
+                else:                                # STOPPING, gap closed
+                    self._set_state(GaitState.IDLE)
 
         for i in range(4):
             self.target_angles[i] = self.legs[i].update(dt_s, imu_data)
             self.driver.set_angles(i, self.target_angles[i])
     
     def swing_schedule(self, horizon_s: float):
-        """[(leg, t_start, t_end)] of predicted swings, seconds from now, including gaps."""
-        if not self.walking:
+        if self.state is GaitState.IDLE:
             return []
         T, G = Movement.SWING_DURATION_S, Movement.GAP_DURATION_S
         out = []
@@ -92,6 +121,8 @@ class LegController:
             t_next = t_end + G
         else:
             t_next = max(self.gap_remaining_s, 0.0)
+        if self.state is GaitState.STOPPING:
+            return out                               # only the swing already in flight
         last = self._last_swing_leg
         while t_next < horizon_s:
             last = Movement.next_leg_gait[last + 1]
