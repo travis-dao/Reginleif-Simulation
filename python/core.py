@@ -52,15 +52,11 @@ class Core:
         self.mpc = mpc
         self.lc = leg_ctrl
         self.z_des = z_des_m
-        # crawl gait: a foot travels STEP_LENGTH back in the body frame over 3 swing durations
         self.vx_des = (
             vx_des_mps if vx_des_mps is not None
-            else Movement.STEP_LENGTH_MM * MM / (3.0 * Movement.SWING_DURATION_S)
+            else Movement.STEP_LENGTH_MM * MM / (3.0 * Movement.SWING_DURATION_S + 4.0 * Movement.GAP_DURATION_S)
         )
-        self.vx_des = (
-            vx_des_mps if vx_des_mps is not None
-            else Leg._stance_speed_mm_s() * MM
-        )
+        self.yaw_des = yaw_des
         self.period = solve_period_s
         self.gain = gain_mm_per_n
         self.max_corr = max_corr_mm
