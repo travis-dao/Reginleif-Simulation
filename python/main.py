@@ -110,41 +110,30 @@ def sim():
                 )
 
             # Command schedule: rest -> walk -> rest.
-            core.vx_cmd = (
-                1.0
-                if REST_S <= data.time < REST_S + WALK_S
-                else 0.0
-            )
+            V = 0.8 * controller.v_max_mm_s * 1e-3     # m/s
+            R = 0.25                                    # path radius, m; use float("inf") for straight
+            if REST_S <= data.time < REST_S + WALK_S:
+                core.v_cmd_mps = V
+                core.yaw_rate_cmd = V / R
+            else:
+                core.v_cmd_mps = core.yaw_rate_cmd = 0.0
 
             # Engage MPC once the robot has settled.
             if not mpc_active:
-                if (
-                    data.time > SETTLE_TIME_S
-                    and np.linalg.norm(s.linear_vel) < SETTLE_VEL
-                ):
+                if (data.time > SETTLE_TIME_S and np.linalg.norm(s.linear_vel) < SETTLE_VEL):
                     core.z_des = float(s.pos[2])
                     core.yaw_des = s.yaw
                     mpc_active = True
                     core._t_engaged = 0.0
 
-                    print(
-                        f"MPC engaged at t={data.time:.2f}s, "
-                        f"z_des={core.z_des:.3f} m"
-                    )
+                    print(f"MPC engaged at t={data.time:.2f}s, z_des={core.z_des:.3f} m")
 
             # Solve MPC at most once per simulation step.
             if mpc_active:
                 res = core.step(dt, data.time)
 
-                if (
-                    res is not None
-                    and not res.success
-                    and data.time - last_print > 1.0
-                ):
-                    print(
-                        f"t={data.time:.2f}: "
-                        "MPC solve failed, holding last offsets"
-                    )
+                if (res is not None and not res.success and data.time - last_print > 1.0 ):
+                    print(f"t={data.time:.2f}: MPC solve failed, holding last offsets")
                     last_print = data.time
 
             # Gait + MPC offsets -> servo angles.

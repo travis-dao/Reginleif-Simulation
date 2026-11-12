@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import List, Optional
+import math
 
 from .leg import Leg
 from .leg_config import ImuData, Movement, Offset, Theta3, Vec3
@@ -41,11 +42,29 @@ class LegController:
 
         self.state = GaitState.IDLE
 
+        self._nom_bf = [leg_to_body_frame(i, Offset.neutral_foot_pos_lf[i]) for i in range(4)]
+        self.t_stance_s = 3.0 * Movement.SWING_DURATION_S + 4.0 * Movement.GAP_DURATION_S
+        self.v_max_mm_s = Movement.STEP_LENGTH_MM / self.t_stance_s
+        self.max_step_y_mm = 20.0            # tune: sideways reach of the coxa
+        self.a_v_mm_s2 = 150.0               # twist slew limits, tune
+        self.a_w_rad_s2 = 0.5
+        self._cmd = (0.0, 0.0)               # requested (v mm/s, w rad/s)
+        self._v = 0.0                        # achieved sweep twist
+        self._w = 0.0
+        self._geom = (0.0, 0.0)              # twist that defines step geometry
+
     def init(self) -> None:
         for i in range(4):
             self.legs[i] = Leg(i)
 
     # commands
+    def set_body_command(self, v_mm_s: float, w_rad_s: float) -> None:
+        self._cmd = (v_mm_s, w_rad_s)
+
+    def body_twist(self):
+        """Achieved (v mm/s, w rad/s) the stance feet are producing now."""
+        return self._v, self._w
+
     def request_start(self) -> None:
         if self.state in (GaitState.IDLE, GaitState.STOPPING):
             self._set_state(GaitState.WALKING)
@@ -59,9 +78,6 @@ class LegController:
 
     def next_swing_leg(self) -> int:
         return Movement.next_leg_gait[self._last_swing_leg + 1]
-
-    def stance_speed_mm_s(self) -> float:
-        return 0.0 if self.state is GaitState.IDLE else Leg._stance_speed_mm_s()
 
     # transitions
     def _set_state(self, new: GaitState) -> None:
@@ -89,6 +105,8 @@ class LegController:
         return self.legs[self.swing_leg].swing_time_remaining_s()
 
     def update(self, dt_s: float, imu_data: ImuData) -> None:
+        self._update_twist(dt_s)
+
         grounded = all(leg.is_grounded() for leg in self.legs)
         if grounded and not self.grounded:
             self.swing_leg = -1
@@ -160,3 +178,33 @@ class LegController:
     def export_pos_log(self, ids: List[int]=[0, 1, 2, 3]) -> None:
         for i in ids:
             self.legs[i].export_pos_log()
+
+    def _limit(self, v, w):
+        """Scale (v, w) together, which keeps R = v/w, so every step stays in the workspace."""
+        T = self.t_stance_s
+        k = 1.0
+        for p in self._nom_bf:
+            sx = abs(v - w * p.y) * T
+            sy = abs(w * p.x) * T
+            k = min(k,
+                    Movement.STEP_LENGTH_MM / sx if sx > 1e-9 else 1.0,
+                    self.max_step_y_mm / sy if sy > 1e-9 else 1.0)
+        return v * k, w * k
+
+    def _update_twist(self, dt_s: float) -> None:
+        if self.state is GaitState.IDLE:
+            self._v = self._w = 0.0                    # nothing sweeps
+            self._geom = self._limit(*self._cmd)       # so the first swing lands correctly
+        elif self.state is GaitState.WALKING:
+            vc, wc = self._limit(*self._cmd)
+            self._geom = (vc, wc)
+            self._v += max(-self.a_v_mm_s2 * dt_s, min(self.a_v_mm_s2 * dt_s, vc - self._v))
+            self._w += max(-self.a_w_rad_s2 * dt_s, min(self.a_w_rad_s2 * dt_s, wc - self._w))
+        # STOPPING: hold the last twist until the gait goes IDLE
+
+        vg, wg = self._geom
+        T = self.t_stance_s
+        for leg, p in zip(self.legs, self._nom_bf):
+            vel = Vec3(-(self._v - self._w * p.y), -(self._w * p.x), 0.0)
+            step = Vec3(-(vg - wg * p.y) * T, -(wg * p.x) * T, 0.0)
+            leg.set_stance(vel, step)

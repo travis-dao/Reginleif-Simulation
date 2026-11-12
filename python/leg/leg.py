@@ -111,6 +111,9 @@ class Leg:
         self.mpc_offset_lf = Vec3(0.0, 0.0, 0.0)
         self._mpc_offset_cmd = Vec3(0.0, 0.0, 0.0)
 
+        self.stance_vel = Vec3(0.0, 0.0, 0.0)                       # mm/s: live sweep velocity
+        self.step_vec = Vec3(-Movement.STEP_LENGTH_MM, 0.0, 0.0)    # mm: foot displacement over one stance
+
         self.angle_log = []
         self.foot_pos_log = []
         self.time_s = 0.0
@@ -126,13 +129,22 @@ class Leg:
     def get_current_leg_pos(self) -> Vec3:
         return self.pos_state.foot_curr_pos_lf
 
-    def get_nominal_landing_pos(self) -> Vec3:
-        # Built from the neutral pose (not swing_start_pos_lf, which is stale
-        # when this is called just before start_swing()).
-        end = Offset.neutral_foot_pos_lf[self.id].copy()
-        end.x += Movement.STEP_LENGTH_MM / 2.0
-        return end
+    def set_stance(self, vel: Vec3, step: Vec3) -> None:
+        self.stance_vel = vel.copy()
+        self.step_vec = step.copy()
 
+    def get_rear_pos(self) -> Vec3:
+        p = Offset.neutral_foot_pos_lf[self.id].copy()
+        p.x += self.step_vec.x / 2.0
+        p.y += self.step_vec.y / 2.0
+        return p
+
+    def get_nominal_landing_pos(self) -> Vec3:
+        p = Offset.neutral_foot_pos_lf[self.id].copy()
+        p.x -= self.step_vec.x / 2.0
+        p.y -= self.step_vec.y / 2.0
+        return p
+    
     def swing_time_remaining_s(self) -> float:
         if self.leg_state != LegState.SWING:
             return 0.0
@@ -168,17 +180,6 @@ class Leg:
 
     def get_state(self) -> LegState:
         return self.leg_state
-
-    @staticmethod
-    def _stance_speed_mm_s() -> float:
-        # a foot is in stance for 3 swing periods (the other 3 legs' swings)
-        return Movement.STEP_LENGTH_MM / (3.0 * Movement.SWING_DURATION_S + 4.0 * Movement.GAP_DURATION_S)
-
-    def get_rear_pos(self) -> Vec3:
-        """End-of-stance (rear) foot position, leg frame."""
-        p = Offset.neutral_foot_pos_lf[self.id].copy()
-        p.x -= Movement.STEP_LENGTH_MM / 2.0
-        return p
 
     def update(self, dt_s: float, imu_data: ImuData) -> Theta3:
         self.time_s += dt_s
@@ -315,15 +316,16 @@ class Leg:
 
     def _update_stance(self, dt_s: float) -> None:
         foot = self.pos_state.foot_target_pos_lf
-        rear_x = self.pos_state.stance_target_pos_lf.x
-
-        # constant-velocity slide toward the rear; stop (don't overshoot) at the limit
-        foot.x = max(foot.x - self._stance_speed_mm_s() * dt_s, rear_x)
-
-        # progress, for logging/debug only
-        start_x = self.pos_state.stance_start_pos_lf.x
-        span = start_x - rear_x
-        self.stance_phase = 1.0 if span <= 1e-6 else min((start_x - foot.x) / span, 1.0)
+        rear = self.get_rear_pos()
+        sv = self.stance_vel
+        # keep sweeping only while the rear limit is still ahead of the foot
+        if (rear.x - foot.x) * sv.x + (rear.y - foot.y) * sv.y > 0.0:
+            foot.x += sv.x * dt_s
+            foot.y += sv.y * dt_s
+        start = self.pos_state.stance_start_pos_lf
+        span = math.hypot(rear.x - start.x, rear.y - start.y)
+        done = math.hypot(foot.x - start.x, foot.y - start.y)
+        self.stance_phase = 1.0 if span <= 1e-6 else min(done / span, 1.0)   # debug only
 
     def _update_swing(self, dt_s: float) -> None:
         self.swing_phase += dt_s / Movement.SWING_DURATION_S

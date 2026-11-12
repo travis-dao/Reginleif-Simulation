@@ -33,6 +33,9 @@ def _v_m(v: Vec3) -> np.ndarray:
     """Vec3 in mm -> ndarray in m."""
     return np.array([v.x, v.y, v.z]) * MM
 
+def _wrap(a: float) -> float:
+    return (a + np.pi) % (2 * np.pi) - np.pi
+
 class Mode(Enum):
     STAND = auto()   # lc IDLE, holding position
     WALK = auto()    # lc WALKING or STOPPING
@@ -54,10 +57,6 @@ class Core:
         self.mpc = mpc
         self.lc = leg_ctrl
         self.z_des = z_des_m
-        self.vx_des = (
-            vx_des_mps if vx_des_mps is not None
-            else Movement.STEP_LENGTH_MM * MM / (3.0 * Movement.SWING_DURATION_S + 4.0 * Movement.GAP_DURATION_S)
-        )
         self.yaw_des = yaw_des
         self.period = solve_period_s
         self.gain = gain_mm_per_n
@@ -65,9 +64,12 @@ class Core:
         self.ramp_s = ramp_s            # gain fades 0 -> full after engage
         self._t_engaged = 0.0
 
-        self.vx_cmd = 0.0
         self.mode = Mode.STAND
         self._hold_xy = None
+
+        self.v_cmd_mps = 0.0
+        self.yaw_rate_cmd = 0.0          # rad/s, + = left
+        self.yaw_leash_rad = 0.3         # how far yaw_des may run ahead of the measured yaw
 
         self._offsets: List[Vec3] = [Vec3(0.0, 0.0, 0.0) for _ in range(NUM_LEGS)]
         self._t_since = 1e9
@@ -107,16 +109,19 @@ class Core:
         self._t_engaged += dt_s
         if self._t_since < self.period:
             return self.last_result
+
+        elapsed = self._t_since
         self._t_since = 0.0
-
         s0 = self.state
-        self._update_mode(s0)
         feet_world = self._foot_positions_world(s0)
+        self.lc.set_body_command(self.v_cmd_mps / MM, self.yaw_rate_cmd)
+        self._update_mode(s0)
 
-        if self.yaw_des is None:
-            self.yaw_des = s0.yaw
-
+        # unwrap yaw_des against the measured yaw and leash it
+        self.yaw_des = s0.yaw + float(np.clip(_wrap(self.yaw_des - s0.yaw), -self.yaw_leash_rad, self.yaw_leash_rad))
         x_ref = self._reference(s0)
+        if self.mode is Mode.WALK:
+            self.yaw_des += self.lc.body_twist()[1] * elapsed
         contact = self._contact_schedule()
         feet = self._foot_rel_pos(s0, x_ref, contact)
 
@@ -188,31 +193,30 @@ class Core:
 
     # ------------------------------------------------------------------
     def _reference(self, s0: State) -> List[np.ndarray]:
-        """Reference at steps 1..N.
-        WALK: advance at the speed the legs are actually sweeping (0 once the gait is IDLE).
-        STAND: hold the latched (x, y)."""
         dt, N = self.mpc.cfg.dt, self.mpc.N
-        yaw = self.yaw_des
-
         if self.mode is Mode.WALK:
-            v = self.lc.stance_speed_mm_s() * MM          # 0 when the gait is IDLE
-            v_w = rotation_matrix_yaw(yaw) @ np.array([v, 0.0, 0.0])
-            p0 = s0.pos.copy()
-        else:                                              # STAND
-            v_w = np.zeros(3)
-            p0 = s0.pos.copy()
-            if self._hold_xy is not None:
-                p0[:2] = self._hold_xy
+            v_mm, w = self.lc.body_twist()
+            v = v_mm * MM
+        else:
+            v, w = 0.0, 0.0
+
+        p = s0.pos.copy()
+        if self.mode is Mode.STAND and self._hold_xy is not None:
+            p[:2] = self._hold_xy
 
         out = []
         for k in range(N):
+            yaw_mid = self.yaw_des + w * (k + 0.5) * dt     # midpoint integration of the arc
+            yaw_end = self.yaw_des + w * (k + 1) * dt
+            p[:2] += rotation_matrix_yaw(yaw_mid)[:2, :2] @ np.array([v, 0.0]) * dt
+            p[2] = self.z_des
+
             x = np.zeros(NX)
-            x[2] = yaw
-            pos = p0 + v_w * (k + 1) * dt
-            pos[2] = self.z_des
-            x[3:6] = pos
-            x[9:12] = v_w
-            x[12] = s0.g                                   # gravity slot must equal State.g
+            x[2] = yaw_end
+            x[3:6] = p
+            x[8] = w                                        # yaw rate
+            x[9:12] = rotation_matrix_yaw(yaw_end) @ np.array([v, 0.0, 0.0])
+            x[12] = s0.g
             out.append(x)
         return out
 
@@ -289,15 +293,13 @@ class Core:
         ], dtype=float)
 
     def _update_mode(self, s0):
-        lc = self.lc
-        if self._hold_xy is None:
-            self._hold_xy = s0.pos[:2].copy()
-
-        if self.vx_cmd > 0:
-            lc.request_start()          # no-op if already WALKING; cancels a pending stop
+        moving = abs(self.v_cmd_mps) > 1e-3 or abs(self.yaw_rate_cmd) > 1e-3
+        if moving:
+            self.lc.request_start()
             self.mode = Mode.WALK
         else:
-            lc.request_stop()           # finishes the swing in flight, never interrupts it
-            if self.mode is Mode.WALK and lc.is_idle():
-                self._hold_xy = s0.pos[:2].copy()   # latch where we ended up
+            self.lc.request_stop()
+            if self.mode is Mode.WALK and self.lc.is_idle():
+                self._hold_xy = s0.pos[:2].copy()
+                self.yaw_des = s0.yaw            # latch heading too
                 self.mode = Mode.STAND
