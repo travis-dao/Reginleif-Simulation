@@ -46,7 +46,6 @@ class Core:
         mpc: MPC,
         leg_ctrl: LegController,
         z_des_m: float,
-        vx_des_mps: Optional[float] = None,
         yaw_des: Optional[float] = None,
         solve_period_s: float = 0.03,
         gain_mm_per_n: float = 1.0,
