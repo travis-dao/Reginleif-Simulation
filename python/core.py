@@ -208,8 +208,6 @@ class Core:
         if self.mode is Mode.STAND and self._hold_xy is not None:
             p[:2] = self._hold_xy
 
-        print(w)
-
         out = []
         for k in range(N):
             yaw_mid = self.yaw_des + w * (k + 0.5) * dt     # midpoint integration of the arc
