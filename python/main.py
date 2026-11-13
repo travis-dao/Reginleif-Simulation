@@ -21,12 +21,12 @@ START_HEIGHT = 0.5
 
 HORIZON = 10
 MPC_DT = 0.03
-SETTLE_TIME_S = 0.25       # let the robot drop and stand on the kinematic gait before MPC engages
+SETTLE_TIME_S = 0.0       # let the robot drop and stand on the kinematic gait before MPC engages
 MPC_GAIN = 1.3            # mm of foot offset per N. Set 0.0 to run the pure gait (isolates MPC from gait problems)
 SETTLE_VEL = 0.1          # ...and require the base to be (nearly) at rest
 
 REST_S = 2.0              # stand still
-WALK_S = 8.0              # then walk
+WALK_S = 10.0              # then walk
 TAIL_S = 4.0              # keep running after the stop so the final rest is visible
 END_T = REST_S + WALK_S + TAIL_S
 
@@ -110,8 +110,8 @@ def sim():
                 )
 
             # Command schedule: rest -> walk -> rest.
-            V = 0.8 * controller.v_max_mm_s * 1e-3     # m/s
-            R = 0.25                                    # path radius, m; use float("inf") for straight
+            V = 1.0 * controller.v_max_mm_s * 1e-3     # m/s
+            R = 0.5                                    # path radius, m; use float("inf") for straight
             if REST_S <= data.time < REST_S + WALK_S:
                 core.v_cmd_mps = V
                 core.yaw_rate_cmd = V / R
