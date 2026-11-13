@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-CSV_PATH = Path("python/logs/mpc_ground_forces.csv")
+CSV_PATH = Path("python/logs/mpc.csv")
 
 LEGS = ["FL", "FR", "BR", "BL"]
 
@@ -24,9 +24,12 @@ COLORS = {
     "BL": "tab:red",
 }
 
+MAX_T_S = 8
+
 
 def plot_leg_z_forces(csv_path: str, selected_legs: list[str]) -> None:
     df = pd.read_csv(csv_path)
+    df = df[df["time_s"] < MAX_T_S]
 
     time = df["time_s"]
     swing_leg = df["swing_leg"]
@@ -109,10 +112,9 @@ def plot_leg_z_forces(csv_path: str, selected_legs: list[str]) -> None:
 
 def plot_total_z_force(csv_path):
     """Plot the sum of all four legs' vertical forces over time."""
-    import pandas as pd
-    import matplotlib.pyplot as plt
-
+    
     df = pd.read_csv(csv_path)
+    df = df[df["time_s"] < MAX_T_S]
 
     # Ensure the force columns are numeric.
     legs = ["FL", "FR", "BR", "BL"]
@@ -146,7 +148,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "csv_path",
         nargs="?",
-        default="python/logs/mpc_ground_forces.csv",
+        default="python/logs/mpc.csv",
         help="Path to the robot CSV log (default: robot_log.csv)",
     )
 

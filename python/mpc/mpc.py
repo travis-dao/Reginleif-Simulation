@@ -157,7 +157,7 @@ class MPCConfig:
     I_body: np.ndarray = field(default_factory=lambda: np.eye(3))
     mu: float = 0.4
     f_min: float = 0.0
-    f_max: float = 150.0
+    f_max: float = 90.0
     # [roll pitch yaw | x y z | wx wy wz | vx vy vz | g]
     Q_diag: np.ndarray = field(default_factory=lambda: np.ones(NX))
     R_weight: float = 1e-4

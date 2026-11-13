@@ -18,7 +18,7 @@ CSV_PATH = Path("python/logs/leg0_foot_pos.csv")
 AXIS = ["x", "y", "z"]
 PREFIX = ["target", "final"]
 
-MAX_SAMPLES = 2000
+MAX_SAMPLES = 5000
 
 df = pd.read_csv(CSV_PATH, dtype=float)
 df = df[df["time_s"] >= 1.5]

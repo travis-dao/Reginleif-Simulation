@@ -74,7 +74,7 @@ class Core:
         self._t_since = 1e9
         self.last_result: Optional[MPCResult] = None
 
-        self.force_log = []
+        self.log = []
         self.force_csv_path = Path("python/logs/mpc_ground_forces.csv")
 
         # State estimation lives in the motion subsystem: pos / linear_vel are estimated from
@@ -117,7 +117,9 @@ class Core:
         self._update_mode(s0)
 
         # unwrap yaw_des against the measured yaw and leash it
+        # print(s0.yaw - self.yaw_des)
         self.yaw_des = s0.yaw + float(np.clip(_wrap(self.yaw_des - s0.yaw), -self.yaw_leash_rad, self.yaw_leash_rad))
+        self.yaw_des = s0.yaw
         x_ref = self._reference(s0)
         if self.mode is Mode.WALK:
             self.yaw_des += self.lc.body_twist()[1] * elapsed
@@ -152,6 +154,10 @@ class Core:
             row["com_y_m"] = float(s0.pos[1])
             row["com_z_m"] = float(s0.pos[2])
 
+            row["roll"] = float(s0.roll)
+            row["pitch"] = float(s0.pitch)
+            row["yaw"] = float(s0.yaw)
+
             for i, name in enumerate(["FL", "FR", "BR", "BL"]):
                 # World-frame foot position, metres.
                 row[f"{name}_x_m"] = float(feet_world[i, 0])
@@ -163,7 +169,7 @@ class Core:
                 row[f"{name}_Fy_N"] = float(forces[i, 1])
                 row[f"{name}_Fz_N"] = float(forces[i, 2])
 
-            self.force_log.append(row)
+            self.log.append(row)
 
             # Convert forces to foot position corrections
             self._offsets = self._to_offsets(res.u0.foot_ground_force, contact[0], s0.yaw)
@@ -171,23 +177,23 @@ class Core:
         self.lc.apply_mpc_corrections(self._offsets)
         return res
 
-    def export_force_log(self, filepath="python/logs/mpc_ground_forces.csv"):
-        # print(self.force_log)
+    def export_log(self, filepath="python/logs/mpc.csv"):
+        # print(self.log)
         path = Path(filepath)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        if not self.force_log:
-            print("No force samples recorded; CSV not written.")
+        if not self.log:
+            print("No samples recorded; CSV not written.")
             return
 
-        fieldnames = list(self.force_log[0].keys())
+        fieldnames = list(self.log[0].keys())
 
         with path.open("w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
-            writer.writerows(self.force_log)
+            writer.writerows(self.log)
 
-        print(f"Recorded samples: {len(self.force_log)}")
+        print(f"Recorded samples: {len(self.log)}")
         print(f"CSV saved to: {path.resolve()}")
 
     # ------------------------------------------------------------------
@@ -214,7 +220,7 @@ class Core:
             x[2] = yaw_end
             x[3:6] = p
             x[8] = w                                        # yaw rate
-            x[9:12] = rotation_matrix_yaw(yaw_end) @ np.array([v, 0.0, 0.0])
+            x[9:12] = rotation_matrix_yaw(yaw_end) @ np.array([self.lc.v_max_mm_s * MM, 0.0, 0.0])
             x[12] = s0.g
             out.append(x)
         return out

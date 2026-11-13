@@ -45,13 +45,17 @@ class LegController:
         self._nom_bf = [leg_to_body_frame(i, Offset.neutral_foot_pos_lf[i]) for i in range(4)]
         self.t_stance_s = 3.0 * Movement.SWING_DURATION_S + 4.0 * Movement.GAP_DURATION_S
         self.v_max_mm_s = Movement.STEP_LENGTH_MM / self.t_stance_s
-        self.max_step_y_mm = 20.0            # tune: sideways reach of the coxa
-        self.a_v_mm_s2 = 150.0               # twist slew limits, tune
+        self.max_step_y_mm = 40.0            # tune: sideways reach of the coxa
+        self.a_v_mm_s2 = 1e6               # twist slew limits, tune
         self.a_w_rad_s2 = 0.5
         self._cmd = (0.0, 0.0)               # requested (v mm/s, w rad/s)
         self._v = 0.0                        # achieved sweep twist
         self._w = 0.0
         self._geom = (0.0, 0.0)              # twist that defines step geometry
+
+        self.turn_v_eps = 5.0 # mm/s, below this, cound yaw cmd as "turn in place"
+        self.turn_w_eps = 0.02 #rad/s
+        self._order = Movement.ORDER_WALK
 
     def init(self) -> None:
         for i in range(4):
@@ -77,7 +81,17 @@ class LegController:
         return self.state is GaitState.IDLE
 
     def next_swing_leg(self) -> int:
-        return Movement.next_leg_gait[self._last_swing_leg + 1]
+        return self._after(self._last_swing_leg)
+
+    def _select_order(self):
+        v, w = self._cmd                      # use the *command*, not the ramping achieved twist
+        if abs(v) < self.turn_v_eps and abs(w) > self.turn_w_eps:
+            return Movement.ORDER_TURN_L if w > 0 else Movement.ORDER_TURN_R
+        return Movement.ORDER_WALK
+
+    def _after(self, last: int) -> int:
+        o = self._order
+        return o[0] if last < 0 else o[(o.index(last) + 1) % 4]
 
     # transitions
     def _set_state(self, new: GaitState) -> None:
@@ -111,6 +125,7 @@ class LegController:
         if grounded and not self.grounded:
             self.swing_leg = -1
             self.gap_remaining_s = Movement.GAP_DURATION_S
+            self._order = self._select_order()
         self.grounded = grounded
 
         if self.grounded and self.state is not GaitState.IDLE:
@@ -118,6 +133,7 @@ class LegController:
             if self.gap_remaining_s <= 0.0:
                 if self.state is GaitState.WALKING:
                     next = self.next_swing_leg()
+                    print(self._order)
                     self._last_swing_leg = next
                     self.swing_leg = next
                     self.legs[next].start_swing(self.legs[next].get_nominal_landing_pos())
@@ -143,7 +159,7 @@ class LegController:
             return out                               # only the swing already in flight
         last = self._last_swing_leg
         while t_next < horizon_s:
-            last = Movement.next_leg_gait[last + 1]
+            last = self._after(last)
             out.append((last, t_next, t_next + T))
             t_next += T + G
         return out

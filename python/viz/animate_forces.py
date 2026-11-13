@@ -10,7 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-CSV_PATH = Path("python/logs/mpc_ground_forces.csv")
+CSV_PATH = Path("python/logs/mpc.csv")
 
 LEGS = ["FL", "FR", "BR", "BL"]
 

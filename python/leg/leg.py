@@ -132,6 +132,7 @@ class Leg:
     def set_stance(self, vel: Vec3, step: Vec3) -> None:
         self.stance_vel = vel.copy()
         self.step_vec = step.copy()
+        # print(f"{self.id} | vec={self.step_vec}, vel={self.stance_vel}")
 
     def get_rear_pos(self) -> Vec3:
         p = Offset.neutral_foot_pos_lf[self.id].copy()
@@ -199,7 +200,7 @@ class Leg:
         cmd = zero if self.leg_state == LegState.SWING else self._mpc_offset_cmd
         alpha = 1.0 - math.exp(-dt_s / self.MPC_OFFSET_TAU_S)
         self.mpc_offset_lf = self.mpc_offset_lf + (cmd - self.mpc_offset_lf) * alpha
-        # print(self.mpc_offset_lf)
+        # print(f"{self.id} | offset={self.mpc_offset_lf}")
 
         self._move_leg()
 

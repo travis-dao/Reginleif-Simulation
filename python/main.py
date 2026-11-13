@@ -27,7 +27,7 @@ SETTLE_VEL = 0.1          # ...and require the base to be (nearly) at rest
 
 REST_S = 2.0              # stand still
 WALK_S = 10.0              # then walk
-TAIL_S = 4.0              # keep running after the stop so the final rest is visible
+TAIL_S = 2.0              # keep running after the stop so the final rest is visible
 END_T = REST_S + WALK_S + TAIL_S
 
 build_sim_xml(SRC, DST, START_HEIGHT, KP, FORCE)
@@ -61,6 +61,11 @@ cfg = MPCConfig(
     R_weight=1e-3,                                 # larger = smoother forces, less chatter
     mu=0.4,                                        # keep <= foot friction in the XML
     # [roll pitch yaw | x y z | wx wy wz | vx vy vz | g]
+    # Q_diag=np.array([5, 5, 30, 
+    #                  1, 1, 50, 
+    #                  1, 1, 10, 
+    #                  1, 1, 1, 
+    #                  0.0]),
     Q_diag=np.array([5, 5, 10, 
                      1, 1, 50, 
                      1, 1, 1, 
@@ -99,22 +104,22 @@ def sim():
             # Update state estimate every control step.
             s = core.estimate(dt, make_imu(model, data, body_id))
 
-            if EST_DEBUG_PERIOD_S > 0 and data.time - last_est_print > EST_DEBUG_PERIOD_S:
-                last_est_print = data.time
-                pos_err = s.pos - data.qpos[_qadr:_qadr + 3]
-                vel_err = s.linear_vel - data.qvel[_vadr:_vadr + 3]
-                print(
-                    f"t={data.time:.2f}: "
-                    f"est pos err={np.round(pos_err, 4)}  "
-                    f"vel err={np.round(vel_err, 4)}"
-                )
+            # if EST_DEBUG_PERIOD_S > 0 and data.time - last_est_print > EST_DEBUG_PERIOD_S:
+            #     last_est_print = data.time
+            #     pos_err = s.pos - data.qpos[_qadr:_qadr + 3]
+            #     vel_err = s.linear_vel - data.qvel[_vadr:_vadr + 3]
+            #     print(
+            #         f"t={data.time:.2f}: "
+            #         f"est pos err={np.round(pos_err, 4)}  "
+            #         f"vel err={np.round(vel_err, 4)}"
+            #     )
 
             # Command schedule: rest -> walk -> rest.
             V = 1.0 * controller.v_max_mm_s * 1e-3     # m/s
             R = 0.5                                    # path radius, m; use float("inf") for straight
             if REST_S <= data.time < REST_S + WALK_S:
                 core.v_cmd_mps = V
-                core.yaw_rate_cmd = V / R
+                core.yaw_rate_cmd = 0
             else:
                 core.v_cmd_mps = core.yaw_rate_cmd = 0.0
 
@@ -157,14 +162,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--export",
         nargs="+",
-        choices=["force", "pos"],
+        choices=["mpc", "pos"],
     )
 
     args = parser.parse_args()
 
     if args.export:
-        if "force" in args.export:
-            core.export_force_log()
+        if "mpc" in args.export:
+            core.export_log()
 
         if "pos" in args.export:
             controller.export_pos_log([0])
