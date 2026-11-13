@@ -45,7 +45,7 @@ class LegController:
         self._nom_bf = [leg_to_body_frame(i, Offset.neutral_foot_pos_lf[i]) for i in range(4)]
         self.t_stance_s = 3.0 * Movement.SWING_DURATION_S + 4.0 * Movement.GAP_DURATION_S
         self.v_max_mm_s = Movement.STEP_LENGTH_MM / self.t_stance_s
-        self.max_step_y_mm = 40.0            # tune: sideways reach of the coxa
+        self.max_step_y_mm = 100.0            # tune: sideways reach of the coxa
         self.a_v_mm_s2 = 150.0               # twist slew limits, tune
         self.a_w_rad_s2 = 0.5
         self._cmd = (0.0, 0.0)               # requested (v mm/s, w rad/s)
