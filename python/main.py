@@ -118,8 +118,8 @@ def sim():
             V = 1.0 * controller.v_max_mm_s * 1e-3     # m/s
             R = 0.1                                    # path radius, m; use float("inf") for straight
             if REST_S <= data.time < REST_S + WALK_S:
-                core.v_cmd_mps = 0
-                core.yaw_rate_cmd = V / R
+                core.v_cmd_mps = V
+                core.yaw_rate_cmd = 0
             else:
                 core.v_cmd_mps = core.yaw_rate_cmd = 0.0
 

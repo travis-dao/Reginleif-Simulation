@@ -9,6 +9,7 @@ PYTHON_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PYTHON_DIR))
 
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 
 CSV_PATH = Path("python/logs/mpc.csv")
@@ -88,14 +89,14 @@ for i in range(1, len(df) + 1):
 for col in COLS:
     ax.plot(
         time,
-        df[col],
+        df[col] * 180.0 / np.pi,
         linewidth=1.8,
         label=col.capitalize(),
     )
 
 ax.set_title("Body Orientation Over Time")
 ax.set_xlabel("Time (s)")
-ax.set_ylabel("Orientation (rad)")
+ax.set_ylabel("Orientation (deg)")
 ax.grid(True, alpha=0.3)
 
 # Remove duplicate legend labels.
