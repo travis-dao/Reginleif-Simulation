@@ -7,9 +7,9 @@ import mujoco.viewer
 import argparse
 
 from leg.leg_controller import LegController
-from mpc.mpc import MPC, MPCConfig
-from core import Core
-from state_estimator import make_imu   # sim only: MuJoCo stands in for the IMU
+from motion.mpc import MPC, MPCConfig
+from motion.core import Core
+from motion.state_estimator import make_imu   # sim only: MuJoCo stands in for the IMU
 from build_sim_xml import build_sim_xml
 
 SRC = "assembly/xml/reginleif.xml"
@@ -118,8 +118,8 @@ def sim():
             V = 1.0 * controller.v_max_mm_s * 1e-3     # m/s
             R = 0.1                                    # path radius, m; use float("inf") for straight
             if REST_S <= data.time < REST_S + WALK_S:
-                core.v_cmd_mps = V
-                core.yaw_rate_cmd = 0
+                core.v_cmd_mps = 0
+                core.yaw_rate_cmd = V / R
             else:
                 core.v_cmd_mps = core.yaw_rate_cmd = 0.0
 

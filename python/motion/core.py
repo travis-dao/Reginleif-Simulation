@@ -19,14 +19,14 @@ import numpy as np
 from leg.leg_config import Movement, Vec3
 from leg.leg_controller import LegController
 from leg.leg import Leg
-from mpc.mpc import MPC, MPCProblem, MPCResult, State, NX, NUM_LEGS
-from mpc.util import (
+from motion.mpc import MPC, MPCProblem, MPCResult, State, NX, NUM_LEGS
+from motion.util import (
     foot_forces_to_positions,
     rotation_matrix_yaw,
     world_vector_to_leg_frame,
 )
 
-from state_estimator import StateEstimator, EstimatorConfig, ImuData
+from motion.state_estimator import StateEstimator, EstimatorConfig, ImuData
 
 MM = 1e-3
 def _v_m(v: Vec3) -> np.ndarray:

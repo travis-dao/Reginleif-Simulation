@@ -18,7 +18,7 @@ from typing import Callable, Optional, Sequence
 import mujoco
 import numpy as np
 
-from mpc.mpc import State
+from motion.mpc import State
 
 NL = 4
 NS = 6 + 3 * NL   # 18
