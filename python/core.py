@@ -119,7 +119,6 @@ class Core:
         # unwrap yaw_des against the measured yaw and leash it
         # print(s0.yaw - self.yaw_des)
         self.yaw_des = s0.yaw + float(np.clip(_wrap(self.yaw_des - s0.yaw), -self.yaw_leash_rad, self.yaw_leash_rad))
-        self.yaw_des = s0.yaw
         x_ref = self._reference(s0)
         if self.mode is Mode.WALK:
             self.yaw_des += self.lc.body_twist()[1] * elapsed
@@ -209,6 +208,8 @@ class Core:
         if self.mode is Mode.STAND and self._hold_xy is not None:
             p[:2] = self._hold_xy
 
+        print(w)
+
         out = []
         for k in range(N):
             yaw_mid = self.yaw_des + w * (k + 0.5) * dt     # midpoint integration of the arc
@@ -220,7 +221,7 @@ class Core:
             x[2] = yaw_end
             x[3:6] = p
             x[8] = w                                        # yaw rate
-            x[9:12] = rotation_matrix_yaw(yaw_end) @ np.array([self.lc.v_max_mm_s * MM, 0.0, 0.0])
+            x[9:12] = rotation_matrix_yaw(yaw_end) @ np.array([v, 0.0, 0.0])
             x[12] = s0.g
             out.append(x)
         return out

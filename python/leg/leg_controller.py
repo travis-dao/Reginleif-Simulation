@@ -46,7 +46,7 @@ class LegController:
         self.t_stance_s = 3.0 * Movement.SWING_DURATION_S + 4.0 * Movement.GAP_DURATION_S
         self.v_max_mm_s = Movement.STEP_LENGTH_MM / self.t_stance_s
         self.max_step_y_mm = 40.0            # tune: sideways reach of the coxa
-        self.a_v_mm_s2 = 1e6               # twist slew limits, tune
+        self.a_v_mm_s2 = 150.0               # twist slew limits, tune
         self.a_w_rad_s2 = 0.5
         self._cmd = (0.0, 0.0)               # requested (v mm/s, w rad/s)
         self._v = 0.0                        # achieved sweep twist
@@ -133,7 +133,6 @@ class LegController:
             if self.gap_remaining_s <= 0.0:
                 if self.state is GaitState.WALKING:
                     next = self.next_swing_leg()
-                    print(self._order)
                     self._last_swing_leg = next
                     self.swing_leg = next
                     self.legs[next].start_swing(self.legs[next].get_nominal_landing_pos())
