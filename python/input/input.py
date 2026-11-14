@@ -10,7 +10,7 @@ class Input:
 
 
 class InputController:
-    MAX_INPUT_RATES = 15.0 # 1.0 -> 1 sec, 2 sec -> 0.5 sec
+    MAX_INPUT_RATES = 10.0 # 1.0 -> 1 sec, 2 sec -> 0.5 sec
     def __init__(self):
         self.controls = KeyboardInput()
         self.input_ = Input()
