@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import sys
@@ -10,9 +11,8 @@ if TYPE_CHECKING:
 
 
 def _child_python() -> str:
-    """Interpreter for the child process. Prefer the venv's python3, since
-    sys.executable may be the mjpython launcher (which has the same
-    main-thread problem)."""
+    """Interpreter for child processes. Prefer the venv's python3, since
+    sys.executable may be the mjpython launcher (same main-thread problem)."""
     override = os.environ.get("VISUALIZER_PYTHON")
     if override:
         return override
@@ -20,22 +20,21 @@ def _child_python() -> str:
     return candidate if os.path.exists(candidate) else sys.executable
 
 
-class InputVisualizer:
-    """Parent-side handle. Spawns the pygame window in a separate process."""
+class PygameWindow:
+    """Parent-side handle: one child process (and one window) per instance."""
 
-    SEND_HZ = 60
-
-    def __init__(self):
+    def __init__(self, kind: str, send_hz: float = 60.0):
         self.running = True
+        self._period = 1.0 / send_hz
         self._last_send = 0.0
         self._proc = subprocess.Popen(
-            [_child_python(), os.path.abspath(__file__)],
+            [_child_python(), os.path.abspath(__file__), kind],
             stdin=subprocess.PIPE,
             text=True,
             bufsize=1,
         )
 
-    def update(self, command: "Input"):
+    def send(self, **values):
         if not self.running:
             return
         if self._proc.poll() is not None:      # window was closed
@@ -43,12 +42,12 @@ class InputVisualizer:
             return
 
         now = time.time()
-        if now - self._last_send < 1.0 / self.SEND_HZ:
+        if now - self._last_send < self._period:
             return
         self._last_send = now
 
         try:
-            self._proc.stdin.write(f"{command.x} {command.y}\n")
+            self._proc.stdin.write(json.dumps(values) + "\n")
             self._proc.stdin.flush()
         except (BrokenPipeError, ValueError):
             self.running = False
@@ -64,21 +63,68 @@ class InputVisualizer:
             self._proc.terminate()
 
 
+class InputVisualizer(PygameWindow):
+    """Joystick window. Same interface as before: update(command)."""
+
+    def __init__(self):
+        super().__init__("joystick")
+
+    def update(self, command: "Input"):
+        self.send(x=command.x, y=command.y)
+
+
+class StateVisualizer(PygameWindow):
+    """Second window: a text readout of whatever you pass to update()."""
+
+    def __init__(self):
+        super().__init__("state", send_hz=20.0)
+
+    def update(self, **values):
+        self.send(**values)
+
+
 # ---------------------------------------------------------------------------
-# Child process: owns the pygame window (runs on that process's main thread)
+# Child process side: draw functions, one per window kind
 # ---------------------------------------------------------------------------
-def _worker():
+def _draw_joystick(pg, screen, font, s):
+    W, R = 320, 100
+    cx, cy = W // 2, 135
+    x, y = s.get("x", 0.0), s.get("y", 0.0)
+
+    pg.draw.circle(screen, (90, 95, 110), (cx, cy), R, 2)
+    pg.draw.line(screen, (65, 70, 85), (cx - R, cy), (cx + R, cy), 1)
+    pg.draw.line(screen, (65, 70, 85), (cx, cy - R), (cx, cy + R), 1)
+
+    # Positive Y is up, so invert screen coordinates.
+    pg.draw.circle(screen, (227, 44, 27), (int(cx + x * R), int(cy - y * R)), 10)
+
+    screen.blit(font.render(f"X: {x:+.2f}", True, (235, 235, 240)), (30, 275))
+    screen.blit(font.render(f"Y: {y:+.2f}", True, (235, 235, 240)), (170, 275))
+
+
+def _draw_state(pg, screen, font, s):
+    for i, (k, v) in enumerate(s.items()):
+        txt = f"{k}: {v:+.3f}" if isinstance(v, (int, float)) else f"{k}: {v}"
+        screen.blit(font.render(txt, True, (235, 235, 240)), (20, 20 + 28 * i))
+
+
+# kind -> (caption, (width, height), draw function)
+WINDOWS = {
+    "joystick": ("Input", (320, 360), _draw_joystick),
+    "state":    ("State", (320, 240), _draw_state),
+}
+
+
+def _worker(kind: str):
     import pygame
 
-    WIDTH, HEIGHT, RADIUS = 320, 360, 100
-
-    state = {"x": 0.0, "y": 0.0, "alive": True}
+    title, size, draw = WINDOWS[kind]
+    state = {"alive": True, "data": {}}
 
     def reader():
         for line in sys.stdin:
             try:
-                x, y = line.split()
-                state["x"], state["y"] = float(x), float(y)
+                state["data"] = json.loads(line)
             except ValueError:
                 pass
         state["alive"] = False                 # parent closed the pipe
@@ -86,8 +132,8 @@ def _worker():
     threading.Thread(target=reader, daemon=True).start()
 
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Input")
+    screen = pygame.display.set_mode(size)
+    pygame.display.set_caption(title)
     font = pygame.font.Font(None, 26)
     clock = pygame.time.Clock()
 
@@ -96,23 +142,8 @@ def _worker():
             if event.type == pygame.QUIT:
                 state["alive"] = False
 
-        x, y = state["x"], state["y"]
         screen.fill((25, 28, 35))
-        cx, cy = WIDTH // 2, 135
-
-        pygame.draw.circle(screen, (90, 95, 110), (cx, cy), RADIUS, 2)
-        pygame.draw.line(screen, (65, 70, 85), (cx - RADIUS, cy), (cx + RADIUS, cy), 1)
-        pygame.draw.line(screen, (65, 70, 85), (cx, cy - RADIUS), (cx, cy + RADIUS), 1)
-
-        # Positive Y is up, so invert screen coordinates.
-        pygame.draw.circle(
-            screen, (227, 44, 27),
-            (int(cx + x * RADIUS), int(cy - y * RADIUS)), 10
-        )
-
-        screen.blit(font.render(f"X: {x:+.2f}", True, (235, 235, 240)), (30, 275))
-        screen.blit(font.render(f"Y: {y:+.2f}", True, (235, 235, 240)), (170, 275))
-
+        draw(pygame, screen, font, dict(state["data"]))
         pygame.display.flip()
         clock.tick(60)
 
@@ -120,4 +151,4 @@ def _worker():
 
 
 if __name__ == "__main__":
-    _worker()
+    _worker(sys.argv[1] if len(sys.argv) > 1 else "joystick")

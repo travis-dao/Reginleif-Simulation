@@ -79,8 +79,8 @@ c_min = abs(FEMUR_LENGTH_MM - TIBIA_LENGTH_MM)
 
 
 class Movement:
-    STEP_LENGTH_MM = 100.0
-    STEP_HEIGHT_MM = 60.0
+    STEP_LENGTH_MM = 80.0
+    STEP_HEIGHT_MM = 50.0
     SWING_DURATION_S = 0.4
     GAP_DURATION_S = 0.1 # 1/4 of swing duration seems to work well
 

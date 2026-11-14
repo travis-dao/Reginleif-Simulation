@@ -14,6 +14,7 @@ from motion.stabilizer import Stabilizer, Config
 from build_sim_xml import build_sim_xml
 from input.input import InputController
 from input.visualizer import InputVisualizer
+from input.smooth import smoothing
 
 # print(mujoco.__version__)
 
@@ -100,12 +101,6 @@ core.reset(data.qpos[_qadr:_qadr + 3].copy(), np.zeros(3), make_imu(model, data,
 input_controller = InputController()
 visualizer = InputVisualizer()
 
-import math
-def smoothing(x: float, p: float = 2.0) -> float:
-    if abs(x) <= 1e-3:
-        return math.copysign(float("inf"), x)
-    return math.copysign(0.1 / (abs(x) ** p), x)
-
 def sim():
     # ground truth is read ONLY for this printout (sim diagnostic); the MPC never sees it
     EST_DEBUG_PERIOD_S = 1.0   # print estimate vs ground truth this often (0 = off)
@@ -150,10 +145,19 @@ def sim():
             input = input_controller.get_input()
             V = input.y * controller.v_max_mm_s * 1e-3     # m/s
             R = smoothing(-input.x)                                  # path radius, m; use float("inf") for straight; 0.1 = turning in place
-            print(R)
+            # print(R)
             if REST_S <= data.time:
                 core.v_cmd_mps = V
-                core.yaw_rate_cmd = controller.v_max_mm_s * 1e-3 / R if abs(input.y) < 1e-3 else V / R
+                if abs(input.y) < 1e-3 and abs(input.x) > 1e-3:
+                    core.yaw_rate_cmd = controller.v_max_mm_s * 1e-3 / R
+                    branch = "input.y near zero"
+                elif abs(input.x) >= 1e-3:
+                    core.yaw_rate_cmd = V / R
+                    branch = "input.x not near zero"
+                else:
+                    core.yaw_rate_cmd = 0
+                    branch = "default zero"
+                # print(f"Branch: {branch} | Yaw rate: {core.yaw_rate_cmd}")
             else:
                 core.v_cmd_mps = core.yaw_rate_cmd = 0.0
 
