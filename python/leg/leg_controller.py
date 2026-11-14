@@ -35,7 +35,7 @@ class LegController:
         self.target_angles: List[Theta3] = [Theta3() for _ in range(4)]
         self.target_angles_buffer: List[float] = [0.0] * NUM_SERVOS
 
-        self.grounded = True
+        self.grounded = False
         self.swing_leg = -1
         self._last_swing_leg = -1
         self.gap_remaining_s = 0.0
@@ -55,7 +55,7 @@ class LegController:
 
         self.turn_v_eps = 5.0 # mm/s, below this, cound yaw cmd as "turn in place"
         self.turn_w_eps = 0.02 #rad/s
-        self._order = Movement.ORDER_WALK
+        self._order = Movement.ORDER_WALK_F
 
     def init(self) -> None:
         for i in range(4):
@@ -87,7 +87,7 @@ class LegController:
         v, w = self._cmd                      # use the *command*, not the ramping achieved twist
         if abs(v) < self.turn_v_eps and abs(w) > self.turn_w_eps:
             return Movement.ORDER_TURN_L if w > 0 else Movement.ORDER_TURN_R
-        return Movement.ORDER_WALK
+        return Movement.ORDER_WALK_F if v > 0 else Movement.ORDER_WALK_B
 
     def _after(self, last: int) -> int:
         o = self._order
@@ -125,13 +125,13 @@ class LegController:
         if grounded and not self.grounded:
             self.swing_leg = -1
             self.gap_remaining_s = Movement.GAP_DURATION_S
-            self._order = self._select_order()
         self.grounded = grounded
 
         if self.grounded and self.state is not GaitState.IDLE:
             self.gap_remaining_s -= dt_s
             if self.gap_remaining_s <= 0.0:
                 if self.state is GaitState.WALKING:
+                    self._order = self._select_order()
                     next = self.next_swing_leg()
                     self._last_swing_leg = next
                     self.swing_leg = next

@@ -85,7 +85,8 @@ class Movement:
     GAP_DURATION_S = 0.1 # 1/4 of swing duration seems to work well
 
     # indexed by (current swing leg + 1); index 0 is "no leg yet" (-1)
-    ORDER_WALK: Tuple[int, ...] = (0, 2, 1, 3)
+    ORDER_WALK_F: Tuple[int, ...] = (0, 2, 1, 3)
+    ORDER_WALK_B: Tuple[int, ...] = (2, 0, 3, 1)
     ORDER_TURN_R: Tuple[int, ...] = (0, 1, 2, 3)
     ORDER_TURN_L: Tuple[int, ...] = (0, 3, 2, 1)
 

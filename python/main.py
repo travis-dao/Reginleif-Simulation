@@ -12,7 +12,8 @@ from motion.core import Core
 from motion.state_estimator import make_imu   # sim only: MuJoCo stands in for the IMU
 from motion.stabilizer import Stabilizer, Config
 from build_sim_xml import build_sim_xml
-import math
+from input.input import InputController
+from input.visualizer import InputVisualizer
 
 # print(mujoco.__version__)
 
@@ -31,8 +32,6 @@ SETTLE_VEL = 0.1          # ...and require the base to be (nearly) at rest
 
 REST_S = 2.0              # stand still
 WALK_S = 5.0              # then walk
-TAIL_S = 2.0              # keep running after the stop so the final rest is visible
-END_T = REST_S + WALK_S + TAIL_S
 
 build_sim_xml(SRC, DST, START_HEIGHT, KP, FORCE)
 
@@ -98,6 +97,14 @@ _qadr = model.jnt_qposadr[_jnt]
 _vadr = model.jnt_dofadr[_jnt]
 core.reset(data.qpos[_qadr:_qadr + 3].copy(), np.zeros(3), make_imu(model, data, body_id))
 
+input_controller = InputController()
+visualizer = InputVisualizer()
+
+import math
+def smoothing(x: float, p: float = 2.0) -> float:
+    if abs(x) <= 1e-3:
+        return math.copysign(float("inf"), x)
+    return math.copysign(0.1 / (abs(x) ** p), x)
 
 def sim():
     # ground truth is read ONLY for this printout (sim diagnostic); the MPC never sees it
@@ -107,10 +114,16 @@ def sim():
     last_print = 0.0
     pid_out = None
 
+
     with mujoco.viewer.launch_passive(model, data) as viewer:
         while viewer.is_running():
             step_start = time.time()
             dt = model.opt.timestep
+
+            input_controller.update(dt)
+            command = input_controller.get_input()
+
+            visualizer.update(command)
 
             # Update state estimate every control step.
             imu = make_imu(model, data, body_id)
@@ -134,11 +147,13 @@ def sim():
             #     )
 
             # Command schedule: rest -> walk -> rest.
-            V = 1.0 * controller.v_max_mm_s * 1e-3     # m/s
-            R = 0.1                                    # path radius, m; use float("inf") for straight
-            if REST_S <= data.time < REST_S + WALK_S:
+            input = input_controller.get_input()
+            V = input.y * controller.v_max_mm_s * 1e-3     # m/s
+            R = smoothing(-input.x)                                  # path radius, m; use float("inf") for straight; 0.1 = turning in place
+            print(R)
+            if REST_S <= data.time:
                 core.v_cmd_mps = V
-                core.yaw_rate_cmd = 0
+                core.yaw_rate_cmd = controller.v_max_mm_s * 1e-3 / R if abs(input.y) < 1e-3 else V / R
             else:
                 core.v_cmd_mps = core.yaw_rate_cmd = 0.0
 
@@ -172,15 +187,15 @@ def sim():
 
             viewer.sync()
 
-            if data.time > END_T:
-                break
-
             sleep = dt - (time.time() - step_start)
             if sleep > 0:
                 time.sleep(sleep)
 
 if __name__ == "__main__":
     sim()
+
+    input_controller.stop()
+    visualizer.close()
 
     parser = argparse.ArgumentParser()
 
