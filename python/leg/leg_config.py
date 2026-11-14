@@ -60,7 +60,7 @@ class Theta3:
 
 
 @dataclass
-class ImuData:
+class ImuCorrection:
     valid: bool = False
     rot_mat: List[List[float]] = field(
         default_factory=lambda: [[1, 0, 0], [0, 1, 0], [0, 0, 1]]

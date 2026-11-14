@@ -10,7 +10,11 @@ from leg.leg_controller import LegController
 from motion.mpc import MPC, MPCConfig
 from motion.core import Core
 from motion.state_estimator import make_imu   # sim only: MuJoCo stands in for the IMU
+from motion.stabilizer import Stabilizer, Config
 from build_sim_xml import build_sim_xml
+import math
+
+# print(mujoco.__version__)
 
 SRC = "assembly/xml/reginleif.xml"
 DST = "assembly/xml/reginleif_sim.xml"
@@ -26,7 +30,7 @@ MPC_GAIN = 1.3            # mm of foot offset per N. Set 0.0 to run the pure gai
 SETTLE_VEL = 0.1          # ...and require the base to be (nearly) at rest
 
 REST_S = 2.0              # stand still
-WALK_S = 10.0              # then walk
+WALK_S = 5.0              # then walk
 TAIL_S = 2.0              # keep running after the stop so the final rest is visible
 END_T = REST_S + WALK_S + TAIL_S
 
@@ -78,6 +82,12 @@ print(f"MPC mass={cfg.mass:.2f} kg, I=\n{np.round(cfg.I_body, 4)}")
 controller = LegController(model, data)
 controller.init()
 
+stabilizer = Stabilizer(Config(
+    K_p=0.0,
+    K_i=0.0,
+    K_d=0.0
+), model, data, "base")
+
 # z_des is latched from the measured standing height once the robot has settled
 core = Core(mpc_solver, controller, z_des_m=0.0, solve_period_s=MPC_DT,
             gain_mm_per_n=MPC_GAIN, gravity_z_mps2=float(model.opt.gravity[2]))
@@ -95,6 +105,7 @@ def sim():
     last_est_print = 0.0
     mpc_active = False
     last_print = 0.0
+    pid_out = None
 
     with mujoco.viewer.launch_passive(model, data) as viewer:
         while viewer.is_running():
@@ -102,7 +113,15 @@ def sim():
             dt = model.opt.timestep
 
             # Update state estimate every control step.
-            s = core.estimate(dt, make_imu(model, data, body_id))
+            imu = make_imu(model, data, body_id)
+            s = core.estimate(dt, imu)
+
+            if data.time - last_est_print >= 0.1:
+                last_est_print = data.time
+
+                # print(f"\rt={data.time:6.2f}s | rpy={np.array2string(imu.rpy_rad * 180.0 / math.pi, precision=3)}",
+                #     flush=True,
+                # )
 
             # if EST_DEBUG_PERIOD_S > 0 and data.time - last_est_print > EST_DEBUG_PERIOD_S:
             #     last_est_print = data.time
@@ -118,8 +137,8 @@ def sim():
             V = 1.0 * controller.v_max_mm_s * 1e-3     # m/s
             R = 0.1                                    # path radius, m; use float("inf") for straight
             if REST_S <= data.time < REST_S + WALK_S:
-                core.v_cmd_mps = 0
-                core.yaw_rate_cmd = V / R
+                core.v_cmd_mps = V
+                core.yaw_rate_cmd = 0
             else:
                 core.v_cmd_mps = core.yaw_rate_cmd = 0.0
 
@@ -141,10 +160,16 @@ def sim():
                     print(f"t={data.time:.2f}: MPC solve failed, holding last offsets")
                     last_print = data.time
 
-            # Gait + MPC offsets -> servo angles.
-            controller.update(dt, None)
+            # Update the PID from the latest completed physics state.
+            # Stabilizer.update() returns the rotation matrix for the legs.
+            pid_out = stabilizer.update(dt_s=dt)
 
+            # Update each leg, apply PID correction, and command MuJoCo joints.
+            controller.update(dt, pid_out)
+
+            # Advance physics using the newly commanded joint angles.
             mujoco.mj_step(model, data)
+
             viewer.sync()
 
             if data.time > END_T:

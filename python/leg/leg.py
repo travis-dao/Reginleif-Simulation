@@ -4,6 +4,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import Optional
 
 import csv
 from pathlib import Path
@@ -12,7 +13,7 @@ from .leg_config import (
     BODY_COXA_X_MM,
     FEMUR_LENGTH_MM,
     TIBIA_LENGTH_MM,
-    ImuData,
+    ImuCorrection,
     Movement,
     Offset,
     Theta3,
@@ -182,7 +183,7 @@ class Leg:
     def get_state(self) -> LegState:
         return self.leg_state
 
-    def update(self, dt_s: float, imu_data: ImuData) -> Theta3:
+    def update(self, dt_s: float, imu_data: Optional[ImuCorrection] = None) -> Theta3:
         self.time_s += dt_s
 
         if self.leg_state == LegState.SWING:
@@ -202,16 +203,19 @@ class Leg:
         self.mpc_offset_lf = self.mpc_offset_lf + (cmd - self.mpc_offset_lf) * alpha
         # print(f"{self.id} | offset={self.mpc_offset_lf}")
 
+        # nominal gait position: never modified by PID or MPC
+        p_ik = self.pos_state.foot_target_pos_lf.copy()
+
+        if self.leg_state == LegState.STANCE and imu_data and imu_data.valid:
+            p_ik.rotate(imu_data.rot_mat)          # rotate a throwaway copy only
+
+        # curr = where the foot is commanded (trajectory + PID + MPC offset)
+        self.pos_state.foot_curr_pos_lf = p_ik + self.mpc_offset_lf
+        self._log_foot_pos()
+
         self._move_leg()
 
-        # curr = where the foot really is (trajectory + MPC offset)
-        self.pos_state.foot_curr_pos_lf = self.pos_state.foot_target_pos_lf + self.mpc_offset_lf
-        self._log_foot_pos()
         return self.servo_angles_deg
-
-    def pid_correction(self, imu_data: ImuData) -> None:
-        if imu_data.valid:
-            self.pos_state.foot_target_pos_lf.rotate(imu_data.rot_mat)
 
     def export_angle_log(self) -> None:
         path = Path(f"python/logs/leg{self.id}_trajectory_angles.csv")
@@ -260,8 +264,7 @@ class Leg:
         # servos frozen at their old angles) retry with less offset, then none.
         angles = None
 
-        
-        target = (self.pos_state.foot_target_pos_lf + self.mpc_offset_lf).copy()
+        target = self.pos_state.foot_curr_pos_lf.copy()
         target.y *= -1.0 if _is_right_leg(self.id) else 1.0  # flip y for right-side legs
         angles = IK.solve(
             target=target,

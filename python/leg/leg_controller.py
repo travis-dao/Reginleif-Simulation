@@ -5,7 +5,7 @@ from typing import List, Optional
 import math
 
 from .leg import Leg
-from .leg_config import ImuData, Movement, Offset, Theta3, Vec3
+from .leg_config import ImuCorrection, Movement, Offset, Theta3, Vec3
 from .movement import LegDriver
 from enum import Enum, auto
 
@@ -118,7 +118,7 @@ class LegController:
             return 0.0
         return self.legs[self.swing_leg].swing_time_remaining_s()
 
-    def update(self, dt_s: float, imu_data: ImuData) -> None:
+    def update(self, dt_s: float, imu_data: Optional[ImuCorrection] = None) -> None:
         self._update_twist(dt_s)
 
         grounded = all(leg.is_grounded() for leg in self.legs)
@@ -139,6 +139,9 @@ class LegController:
                 else:                                # STOPPING, gap closed
                     self._set_state(GaitState.IDLE)
 
+        self.update_driver(dt_s, imu_data)
+
+    def update_driver(self, dt_s: float, imu_data: ImuCorrection):
         for i in range(4):
             self.target_angles[i] = self.legs[i].update(dt_s, imu_data)
             self.driver.set_angles(i, self.target_angles[i])

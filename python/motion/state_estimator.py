@@ -260,21 +260,62 @@ class MujocoFootKinematics:
         world = d.site_xpos if self.kind == "site" else d.geom_xpos
         return np.array([R.T @ (world[i] - origin) for i in self.foot_ids])
 
+IMU_MOUNT_YAW_DEG = 180.0   # how the real IMU is rotated about body Z
 
-def make_imu(model: mujoco.MjModel, data: mujoco.MjData, body_id: int) -> ImuData:
-    """MuJoCo -> ImuData: rpy (ZYX) from the free-joint quaternion, gyro in the BODY frame."""
+
+def _mount_matrix(yaw_deg: float) -> np.ndarray:
+    a = np.deg2rad(yaw_deg)
+    c, s = np.cos(a), np.sin(a)
+    return np.array([[c, -s, 0.0],
+                     [s,  c, 0.0],
+                     [0.0, 0.0, 1.0]])   # IMU frame expressed in body frame
+
+
+def _quat_to_mat(w, x, y, z) -> np.ndarray:
+    return np.array([
+        [1 - 2*(y*y + z*z), 2*(x*y - w*z),     2*(x*z + w*y)],
+        [2*(x*y + w*z),     1 - 2*(x*x + z*z), 2*(y*z - w*x)],
+        [2*(x*z - w*y),     2*(y*z + w*x),     1 - 2*(x*x + y*y)],
+    ])
+
+
+def _rpy_zyx(R: np.ndarray) -> np.ndarray:
+    roll = np.arctan2(R[2, 1], R[2, 2])
+    pitch = -np.arcsin(np.clip(R[2, 0], -1.0, 1.0))
+    yaw = np.arctan2(R[1, 0], R[0, 0])
+    return np.array([roll, pitch, yaw])
+
+
+def make_imu(model: mujoco.MjModel, data: mujoco.MjData, body_id: int,
+             mount_yaw_deg: float = IMU_MOUNT_YAW_DEG,
+             undo_mount: bool = True) -> ImuData:
+    """MuJoCo -> ImuData for an IMU mounted rotated about body Z.
+
+    undo_mount=False: raw sensor output (what the mis-mounted chip reports).
+    undo_mount=True : after the firmware's mount correction (what the estimator should consume).
+    """
     jnt = model.body_jntadr[body_id]
     qadr = model.jnt_qposadr[jnt]
     vadr = model.jnt_dofadr[jnt]
 
     w, x, y, z = data.qpos[qadr + 3:qadr + 7]
-    roll = np.arctan2(2.0 * (w * x + y * z), 1.0 - 2.0 * (x * x + y * y))
-    pitch = np.arcsin(np.clip(2.0 * (w * y - z * x), -1.0, 1.0))
-    yaw = np.arctan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+    R_body = _quat_to_mat(w, x, y, z)
+    M = _mount_matrix(mount_yaw_deg)
 
-    # MuJoCo free-joint qvel[3:6] is already the body-frame angular velocity = a gyro
-    gyro = data.qvel[vadr + 3:vadr + 6].copy()
-    return ImuData(valid=True, rpy_rad=np.array([roll, pitch, yaw]), gyro_rad_s=gyro)
+    # MuJoCo free-joint qvel[3:6] is the body-frame angular velocity
+    g_body = data.qvel[vadr + 3:vadr + 6].copy()
+
+    # What the rotated chip measures (reference frame rotated with it, like a sensor zeroed at boot)
+    R_raw = M.T @ R_body @ M
+    g_raw = M.T @ g_body
+
+    if undo_mount:
+        R_out = M @ R_raw @ M.T     # == R_body
+        g_out = M @ g_raw           # == g_body
+    else:
+        R_out, g_out = R_raw, g_raw
+
+    return ImuData(valid=True, rpy_rad=_rpy_zyx(R_out), gyro_rad_s=g_out)
 
 
 # ----------------------------------------------------------------------
