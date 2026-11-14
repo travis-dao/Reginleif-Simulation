@@ -83,7 +83,7 @@ controller = LegController(model, data)
 controller.init()
 
 stabilizer = Stabilizer(Config(
-    K_p=0.0,
+    K_p=0.1,
     K_i=0.0,
     K_d=0.0
 ), model, data, "base")

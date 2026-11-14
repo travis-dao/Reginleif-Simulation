@@ -113,7 +113,7 @@ def main():
                 data.qvel[vadr:vadr + 6] = 0.0
                 mujoco.mj_forward(model, data)
 
-                imu = make_imu(model, data, body_id, undo_mount=False)
+                imu = make_imu(model, data, body_id)
                 meas = np.rad2deg(np.asarray(imu.rpy_rad, dtype=float))
 
                 err = np.array([wrap_deg(meas[i] - cmd[i]) for i in range(3)])
