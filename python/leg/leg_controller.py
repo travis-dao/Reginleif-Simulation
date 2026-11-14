@@ -55,7 +55,9 @@ class LegController:
 
         self.turn_v_eps = 5.0 # mm/s, below this, cound yaw cmd as "turn in place"
         self.turn_w_eps = 0.02 #rad/s
+
         self._order = Movement.ORDER_WALK_F
+        self._pick_overdue = False
 
     def init(self) -> None:
         for i in range(4):
@@ -79,19 +81,35 @@ class LegController:
 
     def is_idle(self) -> bool:
         return self.state is GaitState.IDLE
+    
+    def _most_overdue_leg(self) -> int:
+        best, best_d = -1, -1.0
+        for i, leg in enumerate(self.legs):
+            cur = leg.get_current_leg_pos()
+            tgt = leg.get_nominal_landing_pos()
+            d = math.hypot(tgt.x - cur.x, tgt.y - cur.y)
+            if d > best_d:
+                best, best_d = i, d
+        return best
 
     def next_swing_leg(self) -> int:
+        if self._pick_overdue:
+            return self._most_overdue_leg()
         return self._after(self._last_swing_leg)
 
     def _select_order(self):
         v, w = self._cmd                      # use the *command*, not the ramping achieved twist
         if abs(v) < self.turn_v_eps and abs(w) > self.turn_w_eps:
             return Movement.ORDER_TURN_L if w > 0 else Movement.ORDER_TURN_R
-        return Movement.ORDER_WALK_F if v > 0 else Movement.ORDER_WALK_B
+        return Movement.ORDER_WALK_B if v < 0 else Movement.ORDER_WALK_F
 
     def _after(self, last: int) -> int:
         o = self._order
-        return o[0] if last < 0 else o[(o.index(last) + 1) % 4]
+
+        if last < 0:
+            return o[0]
+
+        return o[(o.index(last) + 1) % len(o)]
 
     # transitions
     def _set_state(self, new: GaitState) -> None:
@@ -125,18 +143,22 @@ class LegController:
         if grounded and not self.grounded:
             self.swing_leg = -1
             self.gap_remaining_s = Movement.GAP_DURATION_S
-            self._order = self._select_order()
+            new_order = self._select_order()
+            if new_order is not self._order:
+                self._order = new_order
+                self._pick_overdue = self._last_swing_leg >= 0
         self.grounded = grounded
 
         if self.grounded and self.state is not GaitState.IDLE:
             self.gap_remaining_s -= dt_s
             if self.gap_remaining_s <= 0.0:
                 if self.state is GaitState.WALKING:
-                    next = self.next_swing_leg()
-                    self._last_swing_leg = next
-                    self.swing_leg = next
-                    self.legs[next].start_swing(self.legs[next].get_nominal_landing_pos())
-                else:                                # STOPPING, gap closed
+                    nxt = self.next_swing_leg()
+                    self._pick_overdue = False
+                    self._last_swing_leg = nxt
+                    self.swing_leg = nxt
+                    self.legs[nxt].start_swing(self.legs[nxt].get_nominal_landing_pos())
+                else:                                    # STOPPING, gap closed
                     self._set_state(GaitState.IDLE)
 
         self.update_driver(dt_s, imu_data)
@@ -159,13 +181,17 @@ class LegController:
             t_next = max(self.gap_remaining_s, 0.0)
         if self.state is GaitState.STOPPING:
             return out                               # only the swing already in flight
+
         last = self._last_swing_leg
+        first = self._most_overdue_leg() if self._pick_overdue else None
         while t_next < horizon_s:
-            last = self._after(last)
+            last = first if first is not None else self._after(last)
+            first = None
             out.append((last, t_next, t_next + T))
             t_next += T + G
         return out
-
+        return out
+    
     def apply_mpc_corrections(self, offsets_lf: List[Vec3]) -> None:
         """Hand each leg its MPC foot OFFSET (leg frame, mm).
 

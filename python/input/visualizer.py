@@ -129,11 +129,26 @@ def _worker(kind: str):
                 pass
         state["alive"] = False                 # parent closed the pipe
 
+    def _bring_to_front():
+        if sys.platform != "darwin":
+            return
+
+        try:
+            from AppKit import NSApplication, NSApplicationActivateIgnoringOtherApps
+
+            app = NSApplication.sharedApplication()
+            app.activateIgnoringOtherApps_(True)
+        except ImportError:
+            pass
+
     threading.Thread(target=reader, daemon=True).start()
 
     pygame.init()
     screen = pygame.display.set_mode(size)
     pygame.display.set_caption(title)
+
+    _bring_to_front()
+
     font = pygame.font.Font(None, 26)
     clock = pygame.time.Clock()
 

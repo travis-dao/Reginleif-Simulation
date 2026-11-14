@@ -79,16 +79,33 @@ c_min = abs(FEMUR_LENGTH_MM - TIBIA_LENGTH_MM)
 
 
 class Movement:
-    STEP_LENGTH_MM = 80.0
-    STEP_HEIGHT_MM = 50.0
-    SWING_DURATION_S = 0.4
-    GAP_DURATION_S = 0.1 # 1/4 of swing duration seems to work well
+    STEP_LENGTH_MM = 100.0
+    STEP_HEIGHT_MM = 60.0
+    SWING_DURATION_S = 0.3
+    GAP_DURATION_S = SWING_DURATION_S / 4 # 1/4 of swing duration seems to work well
 
     # indexed by (current swing leg + 1); index 0 is "no leg yet" (-1)
     ORDER_WALK_F: Tuple[int, ...] = (0, 2, 1, 3)
     ORDER_WALK_B: Tuple[int, ...] = (2, 0, 3, 1)
-    ORDER_TURN_R: Tuple[int, ...] = (0, 1, 2, 3)
+    ORDER_TURN_R: Tuple[int, ...] = (1, 2, 3, 0)
     ORDER_TURN_L: Tuple[int, ...] = (0, 3, 2, 1)
+
+    @classmethod
+    def order_name(cls, order: Tuple[int, ...]) -> str:
+        for name, value in vars(cls).items():
+            if name.startswith("ORDER_") and value == order:
+                return name
+        return str(order)
+    
+    @classmethod
+    def index_name(cls, index: int) -> str:
+        return {
+            -1: "None",
+            0: "FL",
+            1: "FR",
+            2: "BR",
+            3: "BL",
+        }.get(index, "Unknown")
 
 
 _FOOT_NEUTRAL_MAG = Vec3(120.0, 100.0, -40.0)

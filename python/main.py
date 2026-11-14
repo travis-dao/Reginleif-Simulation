@@ -7,13 +7,14 @@ import mujoco.viewer
 import argparse
 
 from leg.leg_controller import LegController
+from leg.leg_config import Movement
 from motion.mpc import MPC, MPCConfig
 from motion.core import Core
 from motion.state_estimator import make_imu   # sim only: MuJoCo stands in for the IMU
 from motion.stabilizer import Stabilizer, Config
 from build_sim_xml import build_sim_xml
 from input.input import InputController
-from input.visualizer import InputVisualizer
+from input.visualizer import InputVisualizer, StateVisualizer
 from input.smooth import smoothing
 
 # print(mujoco.__version__)
@@ -28,7 +29,7 @@ START_HEIGHT = 0.5
 HORIZON = 10
 MPC_DT = 0.03
 SETTLE_TIME_S = 0.0       # let the robot drop and stand on the kinematic gait before MPC engages
-MPC_GAIN = 1.3            # mm of foot offset per N. Set 0.0 to run the pure gait (isolates MPC from gait problems)
+MPC_GAIN = 1.7            # mm of foot offset per N. Set 0.0 to run the pure gait (isolates MPC from gait problems)
 SETTLE_VEL = 0.1          # ...and require the base to be (nearly) at rest
 
 REST_S = 2.0              # stand still
@@ -83,7 +84,7 @@ controller = LegController(model, data)
 controller.init()
 
 stabilizer = Stabilizer(Config(
-    K_p=0.1,
+    K_p=0.0,
     K_i=0.0,
     K_d=0.0
 ), model, data, "base")
@@ -100,6 +101,7 @@ core.reset(data.qpos[_qadr:_qadr + 3].copy(), np.zeros(3), make_imu(model, data,
 
 input_controller = InputController()
 visualizer = InputVisualizer()
+state = StateVisualizer()
 
 def sim():
     # ground truth is read ONLY for this printout (sim diagnostic); the MPC never sees it
@@ -161,6 +163,17 @@ def sim():
             else:
                 core.v_cmd_mps = core.yaw_rate_cmd = 0.0
 
+            
+            state.update(
+                swing_leg=Movement.index_name(controller.swing_leg),
+                next_swing_leg=Movement.index_name(controller.next_swing_leg()),
+                gait=Movement.order_name(controller._order),
+                vel_cmd=core.v_cmd_mps * 1e3,
+                vel_real=controller._v,
+                yaw_cmd=core.yaw_rate_cmd,
+                yaw_real=controller._w,
+            )
+
             # Engage MPC once the robot has settled.
             if not mpc_active:
                 if (data.time > SETTLE_TIME_S and np.linalg.norm(s.linear_vel) < SETTLE_VEL):
@@ -200,6 +213,7 @@ if __name__ == "__main__":
 
     input_controller.stop()
     visualizer.close()
+    state.close()
 
     parser = argparse.ArgumentParser()
 
