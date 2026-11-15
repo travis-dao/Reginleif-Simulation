@@ -10,8 +10,8 @@ import mujoco.viewer
 from movement.motion.state_estimator import make_imu
 from sim.build_sim_xml import build_sim_xml
 
-SRC = "assembly/xml/reginleif.xml"
-DST = "assembly/xml/reginleif_sim.xml"
+SRC = "models/body/xml/reginleif.xml"
+DST = "models/body/xml/reginleif_sim.xml"
 
 KP = 30.0
 FORCE = 9.4

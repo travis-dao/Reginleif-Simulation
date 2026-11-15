@@ -24,10 +24,8 @@ from input.input import InputController
 from input.visualizer import InputVisualizer, StateVisualizer
 from input.smooth import smoothing
 
-# print(mujoco.__version__)
-
-SRC = "assembly/xml/reginleif.xml"
-DST = "assembly/xml/reginleif_sim.xml"
+SRC = "models/body/xml/reginleif.xml"
+DST = "models/body/xml/reginleif_sim.xml"
 
 KP = 30.0
 FORCE = 9.4
