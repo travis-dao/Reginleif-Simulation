@@ -1,5 +1,3 @@
-# python python/scripts/build_sim_xml.py
-
 import xml.etree.ElementTree as ET
 import math
 import json

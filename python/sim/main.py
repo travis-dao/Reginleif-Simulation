@@ -1,18 +1,25 @@
-# mjpython python/main.py
+# mjpython python/sim/main.py
 
 import time
 import numpy as np
 import mujoco
 import mujoco.viewer
+
+import sys
+from pathlib import Path
 import argparse
 
-from leg.leg_controller import LegController
-from leg.leg_config import Movement
-from motion.mpc import MPC, MPCConfig
-from motion.core import Core
-from motion.state_estimator import make_imu   # sim only: MuJoCo stands in for the IMU
-from motion.stabilizer import Stabilizer, Config
-from build_sim_xml import build_sim_xml
+# Add the python/ directory to the module search path.
+PYTHON_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PYTHON_DIR))
+
+from movement.leg.leg_controller import LegController
+from movement.leg.leg_config import Movement
+from movement.motion.mpc import MPC, MPCConfig
+from movement.motion.core import Core
+from movement.motion.state_estimator import make_imu   # sim only: MuJoCo stands in for the IMU
+from movement.motion.stabilizer import Stabilizer, Config
+from sim.build_sim_xml import build_sim_xml
 from input.input import InputController
 from input.visualizer import InputVisualizer, StateVisualizer
 from input.smooth import smoothing

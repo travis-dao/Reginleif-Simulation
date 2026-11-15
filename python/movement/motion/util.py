@@ -5,7 +5,7 @@ from typing import List
 import mujoco
 
 from .mpc import State
-from leg.leg_config import Vec3, Offset
+from movement.leg.leg_config import Vec3, Offset
 
 def foot_forces_to_positions(
     foot_forces: List[Vec3],

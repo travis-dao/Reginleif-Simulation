@@ -218,7 +218,7 @@ class Leg:
         return self.servo_angles_deg
 
     def export_angle_log(self) -> None:
-        path = Path(f"python/logs/leg{self.id}_trajectory_angles.csv")
+        path = Path(f"python/movement/logs/leg{self.id}_trajectory_angles.csv")
         path.parent.mkdir(parents=True, exist_ok=True)
 
         if not self.angle_log:
@@ -236,7 +236,7 @@ class Leg:
         print(f"CSV saved to: {path.resolve()}")
 
     def export_pos_log(self) -> None:
-        path = Path(f"python/logs/leg{self.id}_foot_pos.csv")
+        path = Path(f"python/movement/logs/leg{self.id}_foot_pos.csv")
         path.parent.mkdir(parents=True, exist_ok=True)
 
         if not self.foot_pos_log:

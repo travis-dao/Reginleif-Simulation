@@ -1,4 +1,4 @@
-# mjpython python/imu_axis_check.py
+# mjpython python/sim/imu_axis_check.py
 
 import time
 import math
@@ -7,8 +7,8 @@ import numpy as np
 import mujoco
 import mujoco.viewer
 
-from motion.state_estimator import make_imu
-from build_sim_xml import build_sim_xml
+from movement.motion.state_estimator import make_imu
+from sim.build_sim_xml import build_sim_xml
 
 SRC = "assembly/xml/reginleif.xml"
 DST = "assembly/xml/reginleif_sim.xml"

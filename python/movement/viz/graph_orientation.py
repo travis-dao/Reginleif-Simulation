@@ -1,5 +1,5 @@
 # Run with:
-# python python/viz/graph_orientation.py
+# python python/movement/viz/graph_orientation.py
 
 import sys
 from pathlib import Path
@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-CSV_PATH = Path("python/logs/mpc.csv")
+CSV_PATH = Path("python/movement/logs/mpc.csv")
 
 COLS = ["roll", "pitch", "yaw"]
 MAX_T_S = 10

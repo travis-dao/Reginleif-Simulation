@@ -1,5 +1,5 @@
 # Run with:
-# python python/viz/graph_forces.py
+# python python/movement/viz/graph_forces.py
 
 import sys
 from pathlib import Path
@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-CSV_PATH = Path("python/logs/mpc.csv")
+CSV_PATH = Path("python/movement/logs/mpc.csv")
 
 LEGS = ["FL", "FR", "BR", "BL"]
 
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "csv_path",
         nargs="?",
-        default="python/logs/mpc.csv",
+        default="python/movement/logs/mpc.csv",
         help="Path to the robot CSV log (default: robot_log.csv)",
     )
 

@@ -9,7 +9,7 @@ from typing import Optional
 import mujoco
 import numpy as np
 
-from leg.leg_config import ImuCorrection
+from movement.leg.leg_config import ImuCorrection
 
 MAX_COMP_DEG = 15.0
 INTEGRAL_MAX = 10.0

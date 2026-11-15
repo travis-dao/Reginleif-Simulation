@@ -1,5 +1,5 @@
 # random bs testing
-# python python/test.py
+# python python/sim/test.py
 
 import time
 from input.input import InputController

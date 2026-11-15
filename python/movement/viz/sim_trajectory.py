@@ -1,4 +1,4 @@
-# mjpython python/viz/sim_trajectory.py
+# mjpython python/movement/viz/sim_trajectory.py
 
 import sys
 from pathlib import Path
@@ -11,8 +11,8 @@ import time
 import mujoco
 import mujoco.viewer
 
-from leg.leg_controller import LegController
-from build_sim_xml import build_sim_xml
+from movement.leg.leg_controller import LegController
+from sim.build_sim_xml import build_sim_xml
 
 SRC = "assembly/xml/reginleif.xml"
 DST = "assembly/xml/reginleif_sim.xml"

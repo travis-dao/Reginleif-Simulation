@@ -1,5 +1,5 @@
 # Run with:
-# python python/viz/animate_forces.py
+# python python/movement/viz/animate_forces.py
 
 import html
 import re
@@ -10,7 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-CSV_PATH = Path("python/logs/mpc.csv")
+CSV_PATH = Path("python/movement/logs/mpc.csv")
 
 LEGS = ["FL", "FR", "BR", "BL"]
 

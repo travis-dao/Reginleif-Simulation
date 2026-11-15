@@ -1,5 +1,5 @@
 # Run with:
-# python python/viz/graph_pos.py
+# python python/movement/viz/graph_pos.py
 
 import sys
 from pathlib import Path
@@ -11,9 +11,9 @@ sys.path.insert(0, str(PYTHON_DIR))
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from leg.leg_config import Movement
+from movement.leg.leg_config import Movement
 
-CSV_PATH = Path("python/logs/leg0_foot_pos.csv")
+CSV_PATH = Path("python/movement/logs/leg0_foot_pos.csv")
 
 AXIS = ["x", "y", "z"]
 PREFIX = ["target", "final"]

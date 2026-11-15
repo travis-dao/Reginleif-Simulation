@@ -16,17 +16,17 @@ from enum import Enum, auto
 
 import numpy as np
 
-from leg.leg_config import Movement, Vec3
-from leg.leg_controller import LegController
-from leg.leg import Leg
-from motion.mpc import MPC, MPCProblem, MPCResult, State, NX, NUM_LEGS
-from motion.util import (
+from movement.leg.leg_config import Movement, Vec3
+from movement.leg.leg_controller import LegController
+from movement.leg.leg import Leg
+from movement.motion.mpc import MPC, MPCProblem, MPCResult, State, NX, NUM_LEGS
+from movement.motion.util import (
     foot_forces_to_positions,
     rotation_matrix_yaw,
     world_vector_to_leg_frame,
 )
 
-from motion.state_estimator import StateEstimator, EstimatorConfig, ImuData
+from movement.motion.state_estimator import StateEstimator, EstimatorConfig, ImuData
 
 MM = 1e-3
 def _v_m(v: Vec3) -> np.ndarray:
@@ -75,7 +75,7 @@ class Core:
         self.last_result: Optional[MPCResult] = None
 
         self.log = []
-        self.force_csv_path = Path("python/logs/mpc_ground_forces.csv")
+        self.force_csv_path = Path("python/movement/logs/mpc_ground_forces.csv")
 
         # State estimation lives in the motion subsystem: pos / linear_vel are estimated from
         # leg kinematics + the gait's swing leg; orientation / gyro come from the IMU.
@@ -176,7 +176,7 @@ class Core:
         self.lc.apply_mpc_corrections(self._offsets)
         return res
 
-    def export_log(self, filepath="python/logs/mpc.csv"):
+    def export_log(self, filepath="python/movement/logs/mpc.csv"):
         # print(self.log)
         path = Path(filepath)
         path.parent.mkdir(parents=True, exist_ok=True)
