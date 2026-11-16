@@ -158,10 +158,7 @@ def main():
     box_move_duration = 1.0
 
     def on_key(keycode):
-        if keycode == ord("K"):
-            tracker.use_kalman = not tracker.use_kalman
-            print("Kalman filter:", "ON" if tracker.use_kalman else "OFF")
-        elif keycode == 32:                      # SPACE: lock / unlock target
+        if keycode == 32:                      # SPACE: lock / unlock target
             _put_latest(cmd_q, "toggle")
 
     try:

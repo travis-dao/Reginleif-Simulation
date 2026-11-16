@@ -39,7 +39,6 @@ class Tracker:
         self.pose_hist = deque(maxlen=600)   # (t, pan_deg, tilt_deg)
         self.kf_ts = None                    # timestamp of last measurement fed to the KF
         self.kf_ready = False
-        self.track = True
 
         kf = cv2.KalmanFilter(4, 2)
         kf.measurementMatrix = np.array([[1, 0, 0, 0],
@@ -74,7 +73,7 @@ class Tracker:
         fresh = (obs is not None and obs["detected"] and obs["center"] is not None
                  and time_s - self.last_detection_time <= TRACK_LOST_GRACE_S)
 
-        if self.looking and fresh and self.track:
+        if self.looking and fresh:
             self._ingest(obs)                     # always keep the filter fed
             goal_pan, goal_tilt = self._estimate(time_s)
             self.pan_target = self._slew(self.pan_target, goal_pan,
