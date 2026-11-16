@@ -3,7 +3,6 @@
 import time
 import queue
 import multiprocessing as mp
-from dataclasses import dataclass
 
 import sys
 from pathlib import Path
@@ -17,45 +16,14 @@ import mujoco
 import mujoco.viewer
 
 from input.input import InputController
-from input.visualizer import InputVisualizer, StateVisualizer
+from input.visualizer import StateVisualizer
 
 from tracking.util import rand_pos_cube, lerp
+from tracking.tracking import Tracker
 
-
-@dataclass
-class AxisConfig:
-    max_rate_deg_s: float      # max angular speed at full stick deflection (deg/s)
-    min_deg: float             # lower limit (deg)
-    max_deg: float             # upper limit (deg)
-    deadzone: float = 0.02     # ignore input below this (normalized)
-    invert: bool = False       # flip the axis direction
-
-
-# Intended mechanical limits. Intersected with the MuJoCo actuator ranges below.
-# PAN_CONFIG = AxisConfig(max_rate_deg_s=60.0, min_deg=-30.0, max_deg=30.0)
-# TILT_CONFIG = AxisConfig(max_rate_deg_s=45.0, min_deg=-15.0, max_deg=15.0)
-PAN_CONFIG = AxisConfig(max_rate_deg_s=60.0, min_deg=-90.0, max_deg=90.0)
-TILT_CONFIG = AxisConfig(max_rate_deg_s=45.0, min_deg=-90.0, max_deg=90.0)
 
 CAMERA_FPS = 30
-
-# Image-space tracking gains. Output is a desired angular rate, not a servo torque.
-TRACK_MAX_RATE_DEG_S = 35.0
-TRACK_DEADBAND = 0.025       # fraction of half-image width/height
-TRACK_LOST_GRACE_S = 0.35
-
-K_P = 10
-
-
-def step_axis(target_deg: float, value: float, cfg: AxisConfig, dt: float) -> float:
-    """Integrate a normalized input [-1, 1] into a target angle (deg), clamped to limits."""
-    value = float(np.clip(value, -1.0, 1.0))
-    if abs(value) < cfg.deadzone:
-        value = 0.0
-    if cfg.invert:
-        value = -value
-    target_deg += value * cfg.max_rate_deg_s * dt
-    return float(np.clip(target_deg, cfg.min_deg, cfg.max_deg))
+CAMERA_NAME = "ptz_cam"      # one name for both the fovy lookup and the renderer
 
 
 def _put_latest(q, item):
@@ -73,139 +41,135 @@ def _put_latest(q, item):
             pass
 
 
-def camera_window(frame_q, event_q):
-    """Detect objects and publish the latest image-space target observation.
+def camera_window(frame_q, event_q, cmd_q):
+    """Detect the object and publish observations stamped with sim time.
 
-    A target is acquired when the user centers the crosshair on it for the
-    configured dwell time. Once acquired, tracking stays active while the
-    object remains detectable; the target does not need to stay centered.
+    Hover the crosshair over the target (yellow circle), press SPACE to lock and
+    start tracking, press SPACE again to unlock. SPACE works in this window or
+    in the MuJoCo viewer.
     """
     import cv2
-    import obj_detection as det
+    import detection_ui as ui
+    from obj_detection import ObjectDetector
+    from acquisition import TargetLock, object_zone, crosshair_point, in_zone
 
-    det.create_config_window()
-    cv2.namedWindow(det.VIEW_WINDOW, cv2.WINDOW_NORMAL)
-    tracker = det.DwellTracker()
+    detector = ObjectDetector()
+    ui.create_config_window()
+    cv2.namedWindow(ui.VIEW_WINDOW, cv2.WINDOW_NORMAL)
+    lock = TargetLock()
     show_mask = False
 
     while True:
-        frame = frame_q.get()
-        if frame is None:
+        msg = frame_q.get()
+        if msg is None:
             break
+        sim_time, frame = msg                      # capture time on the sim clock
 
         img = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        config = det.get_config()
-        bbox, mask = det.find_object(img, config)
-        crosshair = det.crosshair_point(img.shape)
-        zone = det.object_zone(bbox) if bbox is not None else None
-        hit = zone is not None and det.in_zone(crosshair, zone)
-        now = time.monotonic()
-        progress, started, stopped = tracker.update(
-            hit=hit, detected=bbox is not None, now=now,
-            dwell_s=config["dwell_s"],
-        )
+        ui.read_config(detector.config)
+        det = detector.detect(img)
 
-        h, w = img.shape[:2]
-        observation = {
-            "detected": bbox is not None,
-            "center": ((bbox[0] + bbox[2] / 2.0, bbox[1] + bbox[3] / 2.0) if bbox is not None else None),
-            "width": w,
-            "height": h,
-            "looking": tracker.looking,
-            "progress": progress,
-            "timestamp": now,
-        }
-        _put_latest(event_q, observation)
-
-        if started:
-            print("TARGET ACQUIRED — automatic tracking enabled")
-        if stopped:
-            print("TARGET LOST — returned to manual control")
-
-        cv2.imshow(det.VIEW_WINDOW, det.draw_overlay(
-            img, bbox, crosshair, zone, progress, tracker.looking
-        ))
-        if show_mask:
-            cv2.imshow(det.MASK_WINDOW, mask)
+        crosshair = crosshair_point(img.shape)
+        zone = object_zone(det.bbox) if det.found else None
+        hover = zone is not None and in_zone(crosshair, zone)
 
         key = cv2.waitKey(1) & 0xFF
+        toggle = key == 32
+        while True:                                # SPACE pressed in the viewer
+            try:
+                cmd_q.get_nowait()
+                toggle = True
+            except queue.Empty:
+                break
+
+        started, stopped = lock.update(hover, det.found, sim_time, toggle)
+
+        h, w = img.shape[:2]
+        _put_latest(event_q, {
+            "detected": det.found,
+            "center": det.center,
+            "width": w,
+            "height": h,
+            "looking": lock.locked,
+            "timestamp": sim_time,
+        })
+
+        if started:
+            print("TARGET LOCKED — automatic tracking enabled")
+        if stopped:
+            print("TARGET UNLOCKED — manual control")
+
+        cv2.imshow(ui.VIEW_WINDOW, ui.draw_overlay(img, det, lock.locked, hover, zone))
+        if show_mask:
+            cv2.imshow(ui.MASK_WINDOW, det.mask)
+
         if key in (ord("q"), 27):
             break
         if key == ord("m"):
             show_mask = not show_mask
             if not show_mask:
-                cv2.destroyWindow(det.MASK_WINDOW)
-        if key == ord("u"):
-            tracker.unlock()
+                cv2.destroyWindow(ui.MASK_WINDOW)
         if key == ord("p"):
-            print(f"HSV lower={config['lower'].tolist()} upper={config['upper'].tolist()}")
+            c = detector.config
+            print(f"HSV lower={c.lower.tolist()} upper={c.upper.tolist()}")
 
     cv2.destroyAllWindows()
 
 
 def main():
     input_controller = InputController()
-    # input_visualizer = InputVisualizer()
     state_visualizer = StateVisualizer()
 
     model = mujoco.MjModel.from_xml_path("models/cam/pan_tilt.xml")
     data = mujoco.MjData(model)
     renderer = mujoco.Renderer(model, height=480, width=640)
 
-    cam_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_CAMERA, 'tz_cam')
+    cam_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_CAMERA, CAMERA_NAME)
     pan_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "pan_servo")
     tilt_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "tilt_servo")
+    target_body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "green_block")
 
-    target_body_id = mujoco.mj_name2id(
-        model, mujoco.mjtObj.mjOBJ_BODY, "green_block"
-    )
+    if cam_id < 0:
+        raise RuntimeError(f"Camera '{CAMERA_NAME}' not found")
+    if pan_id < 0 or tilt_id < 0:
+        raise RuntimeError("Could not find pan_servo and tilt_servo actuators")
     mocap_id = model.body_mocapid[target_body_id]
-    target_id = mujoco.mj_name2id(
-        model, mujoco.mjtObj.mjOBJ_GEOM, "target"
-    )
-
     if mocap_id < 0:
         raise RuntimeError("green_block is not a mocap body")
 
-    if pan_id < 0 or tilt_id < 0:
-        raise RuntimeError("Could not find pan_servo and tilt_servo actuators in the MuJoCo model")
-
-    pan_lo, pan_hi = np.rad2deg(model.actuator_ctrlrange[pan_id])
-    tilt_lo, tilt_hi = np.rad2deg(model.actuator_ctrlrange[tilt_id])
-    PAN_CONFIG.min_deg = max(PAN_CONFIG.min_deg, float(pan_lo))
-    PAN_CONFIG.max_deg = min(PAN_CONFIG.max_deg, float(pan_hi))
-    TILT_CONFIG.min_deg = max(TILT_CONFIG.min_deg, float(tilt_lo))
-    TILT_CONFIG.max_deg = min(TILT_CONFIG.max_deg, float(tilt_hi))
-
-    pan_target = float(np.rad2deg(data.joint("pan").qpos[0]))
-    tilt_target = float(np.rad2deg(data.joint("tilt").qpos[0]))
+    tracker = Tracker(model, data, fovy=float(model.cam_fovy[cam_id]))
+    tracker.init(model, data, pan_id, tilt_id)
 
     frame_q = mp.Queue(maxsize=2)
     event_q = mp.Queue(maxsize=2)  # latest observation wins
-    proc = mp.Process(target=camera_window, args=(frame_q, event_q), daemon=True)
+    cmd_q = mp.Queue(maxsize=8)    # viewer -> camera process commands
+    proc = mp.Process(target=camera_window, args=(frame_q, event_q, cmd_q), daemon=True)
     proc.start()
 
     dt = model.opt.timestep
     render_every = max(1, round(1 / CAMERA_FPS / dt))
     step = 0
-    looking = False
-    latest_observation = None
-    last_detection_time = 0.0
+    latest_observation = None      # cached between frames; the tracker relies on this
 
     box_initial_pos = data.mocap_pos[mocap_id].copy()
-    box_start_pos = box_initial_pos
-    box_target_pos = box_initial_pos
+    box_start_pos = box_initial_pos.copy()
+    box_target_pos = box_initial_pos.copy()
     box_move_start_time = data.time
     box_move_duration = 1.0
 
+    def on_key(keycode):
+        if keycode == ord("K"):
+            tracker.use_kalman = not tracker.use_kalman
+            print("Kalman filter:", "ON" if tracker.use_kalman else "OFF")
+        elif keycode == 32:                      # SPACE: lock / unlock target
+            _put_latest(cmd_q, "toggle")
+
     try:
-        with mujoco.viewer.launch_passive(model, data) as viewer:
+        with mujoco.viewer.launch_passive(model, data, key_callback=on_key) as viewer:
             while viewer.is_running() and proc.is_alive():
                 t0 = time.monotonic()
                 input_controller.update(dt)
                 cmd = input_controller.get_input()
-                # input_visualizer.update(cmd)
-                error_x = error_y = pan_error_deg = tilt_error_deg = None
 
                 # Consume all queued observations and retain only the newest.
                 while True:
@@ -214,87 +178,32 @@ def main():
                     except queue.Empty:
                         break
 
-                if latest_observation is not None:
-                    new_looking = bool(latest_observation["looking"])
-                    if new_looking != looking:
-                        print("TARGET TRACKING" if new_looking else "MANUAL AIMING")
-                    looking = new_looking
-                    if latest_observation["detected"]:
-                        last_detection_time = latest_observation["timestamp"]
+                tracker.update(dt, data.time, latest_observation, cmd)
 
-                if looking and latest_observation is not None:
-                    center = latest_observation["center"]
-                    width = latest_observation["width"]
-                    height = latest_observation["height"]
-                    fresh = (latest_observation["detected"] and
-                             time.monotonic() - last_detection_time <= TRACK_LOST_GRACE_S)
-                    if fresh and center is not None:
-                        # Normalize image error to [-1, 1]. Positive x means the
-                        # target is right of center; positive y means it is below.
-                        # ex = (center[0] - width / 2.0) / max(width / 2.0, 1.0)
-                        # ey = (center[1] - height / 2.0) / max(height / 2.0, 1.0)
-                        error_x = (center[0] - width / 2.0) 
-                        error_y = (center[1] - height / 2.0) 
-
-                        fovy = model.cam_fovy[cam_id]  # MuJoCo camera vertical FOV, in degrees
-                        fovx = 2 * np.arctan(np.tan(np.deg2rad(fovy) / 2) * (width / height))
-
-                        fx = (width / 2.0) / np.tan(fovx / 2)
-                        fy = (height / 2.0) / np.tan(np.deg2rad(fovy) / 2)
-
-                        pan_error_deg = -np.rad2deg(np.arctan(error_x / fx))
-                        tilt_error_deg = -np.rad2deg(np.arctan(error_y / fy))
-
-                        pan_error_deg = np.clip(pan_error_deg, -TRACK_MAX_RATE_DEG_S, TRACK_MAX_RATE_DEG_S)
-                        tilt_error_deg = np.clip(tilt_error_deg, -TRACK_MAX_RATE_DEG_S, TRACK_MAX_RATE_DEG_S)
-                        
-                        pan_target = step_axis(pan_target + (pan_error_deg * K_P * dt), -cmd.x, PAN_CONFIG, dt)
-                        tilt_target = step_axis(tilt_target + (tilt_error_deg * K_P * dt), cmd.y, TILT_CONFIG, dt)
-                else:
-                    # Manual input remains available before acquisition and
-                    # immediately after target loss.
-                    pan_target = step_axis(pan_target, -cmd.x, PAN_CONFIG, dt)
-                    tilt_target = step_axis(tilt_target, cmd.y, TILT_CONFIG, dt)
-
-                pan_angle_deg = np.rad2deg(data.joint("pan").qpos[0])
-                tilt_angle_deg = np.rad2deg(data.joint("tilt").qpos[0])
-
-                # Move the box toward its target position.
+                # Move the target box toward its next random position.
                 t = (data.time - box_move_start_time) / box_move_duration
-
                 if t >= 1.0:
                     box_start_pos = box_target_pos.copy()
                     box_target_pos = box_initial_pos + rand_pos_cube(1.0)
                     box_move_start_time = data.time
                     t = 0.0
-
                 data.mocap_pos[mocap_id] = lerp(box_start_pos, box_target_pos, t)
 
-                # Update the box's position in MuJoCo.
-                body_id = model.geom_bodyid[target_id]
-                mocap_id = model.body_mocapid[body_id]
-
-                data.ctrl[pan_id] = np.deg2rad(pan_target)
-                data.ctrl[tilt_id] = np.deg2rad(tilt_target)
+                data.ctrl[pan_id] = np.deg2rad(tracker.pan())
+                data.ctrl[tilt_id] = np.deg2rad(tracker.tilt())
 
                 state_visualizer.update(
-                    looking=looking,
-                    ex=error_x,
-                    ey=error_y,
-                    pan_error_deg=pan_error_deg,
-                    tilt_error_deg=tilt_error_deg,
-                    K_p=K_P,
-                    pan_deg=pan_angle_deg,
-                    tilt_deg=tilt_angle_deg,
-                    box_pos=data.mocap_pos[mocap_id].tolist()
+                    looking=tracker.looking,
+                    pan_deg=np.rad2deg(data.joint("pan").qpos[0]),
+                    tilt_deg=np.rad2deg(data.joint("tilt").qpos[0]),
                 )
 
                 mujoco.mj_step(model, data)
                 viewer.sync()
 
                 if step % render_every == 0:
-                    renderer.update_scene(data, camera="ptz_cam")
-                    _put_latest(frame_q, renderer.render().copy())
+                    renderer.update_scene(data, camera=CAMERA_NAME)
+                    _put_latest(frame_q, (data.time, renderer.render().copy()))
                 step += 1
                 time.sleep(max(0.0, dt - (time.monotonic() - t0)))
     finally:
@@ -304,7 +213,6 @@ def main():
             proc.terminate()
             proc.join(timeout=1)
         input_controller.stop()
-        # input_visualizer.close()
         state_visualizer.close()
 
 
