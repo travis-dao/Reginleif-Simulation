@@ -1,4 +1,4 @@
-# mjpython python/tracking/main.py
+# python python/tracking/obj_detection.py
 
 """
 Green-object "look" detector, used by main.py (and runnable standalone).
@@ -10,7 +10,7 @@ Green-object "look" detector, used by main.py (and runnable standalone).
 
 Standalone:
     python3 obj_detection.py [--camera N | --source clip.mp4]
-Keys: q/ESC quit, p print HSV range, m toggle mask window.
+Keys: q/ESC quit, p print HSV range, m toggle mask window, u unlock target.
 """
 
 import argparse
@@ -43,7 +43,7 @@ def create_config_window():
         cv2.createTrackbar(name, CONFIG_WINDOW, DEFAULT_HSV[name], 179, nothing)
     for name in ("S low", "S high", "V low", "V high"):
         cv2.createTrackbar(name, CONFIG_WINDOW, DEFAULT_HSV[name], 255, nothing)
-    cv2.createTrackbar("Min size 0.1%", CONFIG_WINDOW, 5, 200, nothing)
+    cv2.createTrackbar("Min size 0.1%", CONFIG_WINDOW, 3, 200, nothing)
     cv2.createTrackbar("Dwell x0.1s", CONFIG_WINDOW, 0, 50, nothing)
     # macOS: a trackbar-only window can misbehave without an image.
     cv2.imshow(CONFIG_WINDOW, np.zeros((1, 420, 3), dtype=np.uint8))
@@ -123,7 +123,7 @@ def find_object(frame_bgr, config):
 def object_zone(bbox):
     """Circular zone centered on the detected object: (cx, cy, radius)."""
     x, y, w, h = bbox
-    return x + w // 2, y + h // 2, int(min(w, h) / 2)
+    return x + w // 2, y + h // 2, int(min(w, h) / 0.5)
 
 
 def crosshair_point(frame_shape):
@@ -138,31 +138,44 @@ def in_zone(point, zone):
     cx, cy, r = zone
     return (px - cx) ** 2 + (py - cy) ** 2 <= r * r
 
-def dist(bbox):
-    x, y, w, h = bbox
-    pass
-
 
 class DwellTracker:
-    """Turns per-frame hits into a stable 'looking' state."""
+    """Acquire on crosshair dwell; remain locked while the target is detected."""
 
     def __init__(self):
         self.start = None
-        self.last_hit = 0.0
+        self.last_detection = 0.0
         self.looking = False
 
-    def update(self, hit, now, dwell_s):
-        if hit:
-            if self.start is None:
-                self.start = now
-            self.last_hit = now
-        elif self.start is not None and now - self.last_hit > GRACE_SECONDS:
-            self.start = None
+    def unlock(self):
+        self.start = None
+        self.looking = False
+        self.last_detection = 0.0
+
+    def update(self, hit, detected, now, dwell_s):
+        was_looking = self.looking
+
+        if self.looking:
+            if detected:
+                self.last_detection = now
+            elif now - self.last_detection > GRACE_SECONDS:
+                self.unlock()
+        else:
+            if hit:
+                if self.start is None:
+                    self.start = now
+                if detected:
+                    self.last_detection = now
+            elif self.start is not None and now - self.last_detection > GRACE_SECONDS:
+                self.start = None
+
+            elapsed = 0.0 if self.start is None else now - self.start
+            if elapsed >= dwell_s:
+                self.looking = True
+                self.last_detection = now
 
         elapsed = 0.0 if self.start is None else now - self.start
-        was_looking = self.looking
-        self.looking = elapsed >= dwell_s
-        progress = min(1.0, elapsed / dwell_s)
+        progress = 1.0 if self.looking else min(1.0, elapsed / max(dwell_s, 1e-3))
         return progress, (self.looking and not was_looking), (was_looking and not self.looking)
 
 def draw_overlay(frame_bgr, bbox, crosshair, zone, progress, looking):
@@ -182,15 +195,15 @@ def draw_overlay(frame_bgr, bbox, crosshair, zone, progress, looking):
         cv2.circle(out, (cx, cy), r, zone_color, 2, cv2.LINE_AA)
         cv2.circle(out, (cx, cy), 4, (0, 165, 255), -1, cv2.LINE_AA)
 
-    height, width = out.shape[:2]
-    bar_w = int(width * progress)
-    cv2.rectangle(out, (0, height - 12), (width, height), (40, 40, 40), -1)
-    cv2.rectangle(out, (0, height - 12), (bar_w, height),
-                  (0, 255, 0) if looking else (0, 200, 255), -1)
+    # height, width = out.shape[:2]
+    # bar_w = int(width * progress)
+    # cv2.rectangle(out, (0, height - 12), (width, height), (40, 40, 40), -1)
+    # cv2.rectangle(out, (0, height - 12), (bar_w, height),
+    #               (0, 255, 0) if looking else (0, 200, 255), -1)
 
-    label = "LOOKING AT TARGET" if looking else "searching..."
-    cv2.putText(out, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
-                (0, 255, 0) if looking else (255, 255, 255), 2)
+    # label = "TRACKING TARGET" if looking else "Center crosshair to acquire"
+    # cv2.putText(out, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.65,
+    #             (0, 255, 0) if looking else (255, 255, 255), 2)
     return out
 
 def main():
@@ -225,7 +238,12 @@ def main():
         zone = object_zone(bbox) if bbox is not None else None
         hit = zone is not None and in_zone(crosshair, zone)
 
-        progress, started, stopped = tracker.update(hit, time.monotonic(), config["dwell_s"])
+        progress, started, stopped = tracker.update(
+            hit,
+            bbox is not None,
+            time.monotonic(),
+            config["dwell_s"],
+        )
 
         if started:
             print("Now looking at the target")
