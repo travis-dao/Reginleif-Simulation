@@ -32,9 +32,6 @@ class TargetLock:
         self.locked = False
         self.last_detection = 0.0
 
-    def unlock(self):
-        self.locked = False
-
     def update(self, hover, detected, now, toggle):
         """Returns (started, stopped)."""
         was_locked = self.locked
