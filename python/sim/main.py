@@ -38,7 +38,6 @@ MPC_GAIN = 1.7            # mm of foot offset per N. Set 0.0 to run the pure gai
 SETTLE_VEL = 0.1          # ...and require the base to be (nearly) at rest
 
 REST_S = 2.0              # stand still
-WALK_S = 5.0              # then walk
 
 build_sim_xml(SRC, DST, START_HEIGHT, KP, FORCE)
 
@@ -71,12 +70,7 @@ cfg = MPCConfig(
     R_weight=1e-3,                                 # larger = smoother forces, less chatter
     mu=0.4,                                        # keep <= foot friction in the XML
     # [roll pitch yaw | x y z | wx wy wz | vx vy vz | g]
-    # Q_diag=np.array([5, 5, 30, 
-    #                  1, 1, 50, 
-    #                  1, 1, 10, 
-    #                  1, 1, 1, 
-    #                  0.0]),
-    Q_diag=np.array([5, 5, 10, 
+    Q_diag=np.array([50, 50, 10, 
                      1, 1, 50, 
                      1, 1, 1, 
                      1, 1, 1, 

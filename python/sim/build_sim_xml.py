@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET
 import math
 import json
 
-with open('assembly/json/joint_ref_angles.json', 'r') as file:
+with open('models/body/json/joint_ref_angles.json', 'r') as file:
     REF_ANGLES_DEG = json.load(file)
 
 def build_sim_xml(

@@ -87,7 +87,7 @@ class LegController:
         for i, leg in enumerate(self.legs):
             cur = leg.get_current_leg_pos()
             tgt = leg.get_nominal_landing_pos()
-            d = math.hypot(tgt.x - cur.x, tgt.y - cur.y)
+            d = math.hypot(0 - cur.x, 0 - cur.y)
             if d > best_d:
                 best, best_d = i, d
         return best

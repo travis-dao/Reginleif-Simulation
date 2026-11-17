@@ -6,9 +6,9 @@ import math
 # (x, y) breakpoints, ordered by increasing x
 BREAKPOINTS = [
     (0.00, 1.00),  # Start
-    (0.25, 0.5),
-    (0.75, 0.25),
-    (1.00, 0.15),  # End
+    (0.25, 0.75),
+    (0.75, 0.4),
+    (1.00, 0.10),  # End
 ]
 
 
