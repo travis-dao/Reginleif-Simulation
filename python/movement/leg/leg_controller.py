@@ -14,7 +14,7 @@ from typing import List, Optional
 import math
 
 from .leg import Leg
-from .leg_config import ImuCorrection, Movement, Offset, Theta3, Vec3
+from .leg_config import ImuCorrection, Movement, Offset, Theta3, Vec3, rot_rp, transpose3
 from .movement import LegDriver
 from enum import Enum, auto
 from motion.mpc import State
@@ -73,6 +73,8 @@ class LegController:
         self._pick_overdue = False
 
         self._state = State()
+        self.body_roll = 0.0
+        self.body_pitch = 0.0
 
     def init(self) -> None:
         for i in range(4):
@@ -81,6 +83,13 @@ class LegController:
     # commands
     def set_body_command(self, v_mm_s: float, w_rad_s: float) -> None:
         self._cmd = (v_mm_s, w_rad_s)
+
+    def set_body_tilt(self, roll_rad: float, pitch_rad: float) -> None:
+        """Commanded body attitude. Applied to every leg in every state."""
+        self.body_roll, self.body_pitch = roll_rad, pitch_rad
+        R_T = transpose3(rot_rp(roll_rad, pitch_rad))     # build once, share with all legs
+        for leg in self.legs:
+            leg.set_body_tilt(R_T)
 
     def body_twist(self):
         """Achieved (v mm/s, w rad/s) the stance feet are producing now."""

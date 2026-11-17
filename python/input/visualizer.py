@@ -102,18 +102,40 @@ def _draw_joystick(pg, screen, font, s):
     screen.blit(font.render(f"Y: {y:+.2f}", True, (235, 235, 240)), (170, 275))
 
 
+STATE_ROW_HEIGHT = 28
+STATE_TOP_PADDING = 20
+STATE_BOTTOM_PADDING = 20
+STATE_WIDTH = 420
+
+
+def _state_window_size(s):
+    height = (
+        STATE_TOP_PADDING
+        + len(s) * STATE_ROW_HEIGHT
+        + STATE_BOTTOM_PADDING
+    )
+    return STATE_WIDTH, max(100, height)
+
+
 def _draw_state(pg, screen, font, s):
     for i, (k, v) in enumerate(s.items()):
-        txt = f"{k}: {v:+.3f}" if isinstance(v, (int, float)) else f"{k}: {v}"
-        screen.blit(font.render(txt, True, (235, 235, 240)), (20, 20 + 28 * i))
+        if isinstance(v, (int, float)):
+            txt = f"{k}: {v:+.3f}"
+        else:
+            txt = f"{k}: {v}"
+
+        y = STATE_TOP_PADDING + STATE_ROW_HEIGHT * i
+        screen.blit(
+            font.render(txt, True, (235, 235, 240)),
+            (20, y),
+        )
 
 
 # kind -> (caption, (width, height), draw function)
 WINDOWS = {
     "joystick": ("Input", (320, 360), _draw_joystick),
-    "state":    ("State", (320, 240), _draw_state),
+    "state":    ("State", (STATE_WIDTH, 100), _draw_state),
 }
-
 
 def _worker(kind: str):
     import pygame
@@ -127,14 +149,14 @@ def _worker(kind: str):
                 state["data"] = json.loads(line)
             except ValueError:
                 pass
-        state["alive"] = False                 # parent closed the pipe
+        state["alive"] = False
 
     def _bring_to_front():
         if sys.platform != "darwin":
             return
 
         try:
-            from AppKit import NSApplication, NSApplicationActivateIgnoringOtherApps
+            from AppKit import NSApplication
 
             app = NSApplication.sharedApplication()
             app.activateIgnoringOtherApps_(True)
@@ -157,13 +179,20 @@ def _worker(kind: str):
             if event.type == pygame.QUIT:
                 state["alive"] = False
 
+        data = dict(state["data"])
+
+        # Dynamically resize the State window based on parameter count.
+        if kind == "state":
+            required_size = _state_window_size(data)
+            if screen.get_size() != required_size:
+                screen = pygame.display.set_mode(required_size)
+
         screen.fill((25, 28, 35))
-        draw(pygame, screen, font, dict(state["data"]))
+        draw(pygame, screen, font, data)
         pygame.display.flip()
         clock.tick(60)
 
     pygame.quit()
-
 
 if __name__ == "__main__":
     _worker(sys.argv[1] if len(sys.argv) > 1 else "joystick")

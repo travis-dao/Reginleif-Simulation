@@ -70,7 +70,7 @@ cfg = MPCConfig(
     R_weight=1e-3,                                 # larger = smoother forces, less chatter
     mu=0.4,                                        # keep <= foot friction in the XML
     # [roll pitch yaw | x y z | wx wy wz | vx vy vz | g]
-    Q_diag=np.array([1, 1, 10, 
+    Q_diag=np.array([10, 10, 20, 
                      1, 1, 50, 
                      1, 1, 1, 
                      1, 1, 1, 
@@ -172,6 +172,8 @@ def sim():
                 vel_est=core.estimator.state.linear_vel[0] * 1e3,
                 yaw_cmd=core.yaw_rate_cmd,
                 yaw_real=controller._w,
+                roll_des=np.rad2deg(core.roll_des),
+                pitch_des=np.rad2deg(core.pitch_des)
             )
 
             # Engage MPC once the robot has settled.

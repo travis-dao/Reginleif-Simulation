@@ -98,6 +98,14 @@ def rotation_matrix_yaw(yaw: float) -> np.ndarray:
         [0.0, 0.0, 1.0],
     ])
 
+def rotation_matrix_rpy(roll, pitch, yaw):
+    cr, sr, cp, sp_, cy, sy = (math.cos(roll), math.sin(roll), math.cos(pitch),
+                               math.sin(pitch), math.cos(yaw), math.sin(yaw))
+    Rz = np.array([[cy,-sy,0],[sy,cy,0],[0,0,1]])
+    Ry = np.array([[cp,0,sp_],[0,1,0],[-sp_,0,cp]])
+    Rx = np.array([[1,0,0],[0,cr,-sr],[0,sr,cr]])
+    return Rz @ Ry @ Rx
+
 def legToBodyFrame(leg_idx: int, foot_pos_lf: Vec3) -> Vec3:
     return Offset.leg_base_pos_bf[leg_idx] + foot_pos_lf
 

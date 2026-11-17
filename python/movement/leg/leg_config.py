@@ -82,7 +82,7 @@ class Movement:
     STEP_LENGTH_MM = 100.0
     STEP_HEIGHT_MM = 70.0
     SWING_DURATION_S = 0.3
-    GAP_DURATION_S = SWING_DURATION_S / 8 # 1/4 of swing duration seems to work well
+    GAP_DURATION_S = SWING_DURATION_S / 4 # 1/4 of swing duration seems to work well
 
     # indexed by (current swing leg + 1); index 0 is "no leg yet" (-1)
     ORDER_WALK_F: Tuple[int, ...] = (0, 2, 1, 3)
@@ -137,3 +137,17 @@ class Offset:
     neutral_foot_pos_bf: Tuple[Vec3, ...] = tuple(
         b + n for b, n in zip(leg_base_pos_bf, neutral_foot_pos_lf)
     )
+
+def rot_rp(roll: float, pitch: float):
+    """Ry(pitch) @ Rx(roll) as a row-major 3x3 list (yaw is handled elsewhere)."""
+    cr, sr = math.cos(roll), math.sin(roll)
+    cp, sp = math.cos(pitch), math.sin(pitch)
+    return [
+        [cp,  sp * sr, sp * cr],
+        [0.0, cr,      -sr    ],
+        [-sp, cp * sr, cp * cr],
+    ]
+
+
+def transpose3(m):
+    return [[m[j][i] for j in range(3)] for i in range(3)]

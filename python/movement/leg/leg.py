@@ -107,6 +107,8 @@ class Leg:
         self.foot_pos_log = []
         self.time_s = 0.0
 
+        self._tilt_RT = None      # None = no tilt
+
         self._move_leg()
 
     # ------------------------------------------------------------------
@@ -122,6 +124,9 @@ class Leg:
         self.stance_vel = vel.copy()
         self.step_vec = step.copy()
         # print(f"{self.id} | vec={self.step_vec}, vel={self.stance_vel}")
+
+    def set_body_tilt(self, R_T) -> None:
+        self._tilt_RT = R_T
 
     def get_rear_pos(self) -> Vec3:
         p = Offset.neutral_foot_pos_lf[self.id].copy()
@@ -139,8 +144,6 @@ class Leg:
         p.x += k * (v_act.x - v_cmd.x) / omega       # k ~ 0.5..1
         p.y += k * (v_act.y - v_cmd.y) / omega
 
-        if self.id == 0:
-            print(k * (v_act.x - v_cmd.x) / omega)
         return p
     
     def swing_time_remaining_s(self) -> float:
@@ -202,8 +205,18 @@ class Leg:
         # nominal gait position: never modified by PID or MPC
         p_ik = self.pos_state.foot_target_pos_lf.copy()
 
-        if self.leg_state == LegState.STANCE and imu_data and imu_data.valid:
-            p_ik.rotate(imu_data.rot_mat)          # rotate a throwaway copy only
+        # if self.leg_state == LegState.STANCE and imu_data and imu_data.valid:
+        #     p_ik.rotate(imu_data.rot_mat)          # rotate a throwaway copy only
+
+        # body tilt: rotate about the body centre, not the hip
+        if self._tilt_RT is not None:
+            # print(f"before={p_ik}")
+            base = Offset.leg_base_pos_bf[self.id]
+            p_bf = base + p_ik          # Vec3 + Vec3 returns a new object
+            p_bf.rotate(self._tilt_RT)
+            # print(f"R_T={self._tilt_RT}")
+            p_ik = p_bf - base
+            # print(f"after={p_ik}")
 
         # curr = where the foot is commanded (trajectory + PID + MPC offset)
         self.pos_state.foot_curr_pos_lf = p_ik + self.mpc_offset_lf

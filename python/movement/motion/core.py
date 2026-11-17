@@ -15,17 +15,18 @@ from pathlib import Path
 from enum import Enum, auto
 
 import numpy as np
+import math
 
 from movement.leg.leg_config import Movement, Vec3
 from movement.leg.leg_controller import LegController
-from movement.leg.leg import Leg
 from movement.motion.mpc import MPC, MPCProblem, MPCResult, State, NX, NUM_LEGS
 from movement.motion.util import (
     foot_forces_to_positions,
     rotation_matrix_yaw,
+    rotation_matrix_rpy,
     world_vector_to_leg_frame,
 )
-
+from movement.motion.posture import PostureShaper
 from movement.motion.state_estimator import StateEstimator, EstimatorConfig, ImuData
 
 MM = 1e-3
@@ -86,6 +87,10 @@ class Core:
         ))
         self.state: State = self.estimator.state
 
+        self.posture = PostureShaper()
+        self._v_prev = 0.0
+        self.roll_des = self.pitch_des = 0.0
+
     # ------------------------------------------------------------------
     def reset(self, p0: np.ndarray, v0: np.ndarray, imu: ImuData) -> None:
         """Init the estimator at a known pose (sim: spawn pose; hardware: zeros / neutral)."""
@@ -106,6 +111,7 @@ class Core:
         """MPC tick; solves from the latest estimate() every solve_period."""
         self._t_since += dt_s
         self._t_engaged += dt_s
+        self._update_posture(dt_s)
         if self._t_since < self.period:
             return self.last_result
 
@@ -176,6 +182,16 @@ class Core:
         self.lc.apply_mpc_corrections(self._offsets)
         return res
 
+    def _update_posture(self, dt_s):
+        v_mm, w = self.lc.body_twist()
+        v = v_mm * MM
+        a = (v - self._v_prev) / max(dt_s, 1e-6)
+        self._v_prev = v
+        self.roll_des, self.pitch_des = self.posture.update(dt_s, v, w, a)
+        if self.v_cmd_mps < 0:
+            self.pitch_des = np.deg2rad(10)
+        self.lc.set_body_tilt(self.roll_des, self.pitch_des)
+
     def export_log(self, filepath="python/movement/logs/mpc.csv"):
         # print(self.log)
         path = Path(filepath)
@@ -216,6 +232,8 @@ class Core:
             p[2] = self.z_des
 
             x = np.zeros(NX)
+            x[0] = self.roll_des
+            x[1] = self.pitch_des
             x[2] = yaw_end
             x[3:6] = p
             x[8] = w                                        # yaw rate
@@ -237,7 +255,7 @@ class Core:
         """Foot minus CoM, world frame, metres, per step.
         Planted feet are fixed in the WORLD (so r shrinks/grows as the CoM advances);
         a foot that lands inside the horizon is planted at its nominal touchdown point."""
-        R0 = rotation_matrix_yaw(s0.yaw)
+        R0 = rotation_matrix_rpy(self.roll_des, self.pitch_des, s0.yaw)
         world = [s0.pos + R0 @ _v_m(p) for p in self.lc.foot_positions_body()]
         land_bf = [_v_m(p) for p in self.lc.landing_targets_body()]
         airborne = [not contact[0][i] for i in range(NUM_LEGS)]
@@ -245,7 +263,7 @@ class Core:
         out = []
         for k in range(self.mpc.N):
             com = s0.pos if k == 0 else x_ref[k - 1][3:6]   # CoM at the START of step k
-            R = rotation_matrix_yaw(x_ref[k][2])
+            R = rotation_matrix_rpy(x_ref[k][0], x_ref[k][1], x_ref[k][2])
             r = np.zeros((NUM_LEGS, 3))
             for i in range(NUM_LEGS):
                 if contact[k][i]:
