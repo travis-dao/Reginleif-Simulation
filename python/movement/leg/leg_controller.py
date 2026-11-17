@@ -1,6 +1,15 @@
 """Python port of leg_controller.h / leg_controller.cpp."""
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+import argparse
+
+# Add the python/ directory to the module search path.
+PYTHON_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PYTHON_DIR))
+
+
 from typing import List, Optional
 import math
 
@@ -8,6 +17,7 @@ from .leg import Leg
 from .leg_config import ImuCorrection, Movement, Offset, Theta3, Vec3
 from .movement import LegDriver
 from enum import Enum, auto
+from motion.mpc import State
 
 NUM_SERVOS = 12
 
@@ -16,6 +26,8 @@ class GaitState(Enum):
     IDLE = auto()       # all feet planted, stance sweep frozen, no swings scheduled
     WALKING = auto()    # normal crawl: swing, gap, swing, ...
     STOPPING = auto()   # stop requested: finish any swing in flight, then IDLE at the next gap
+
+
 
 
 def leg_to_body_frame(leg: int, foot_pos_lf: Vec3) -> Vec3:
@@ -49,6 +61,7 @@ class LegController:
         self.a_v_mm_s2 = 150.0               # twist slew limits, tune
         self.a_w_rad_s2 = 0.5
         self._cmd = (0.0, 0.0)               # requested (v mm/s, w rad/s)
+        self._v_cmd_xy: Vec3 = Vec3(0.0, 0.0, 0.0)
         self._v = 0.0                        # achieved sweep twist
         self._w = 0.0
         self._geom = (0.0, 0.0)              # twist that defines step geometry
@@ -58,6 +71,8 @@ class LegController:
 
         self._order = Movement.ORDER_WALK_F
         self._pick_overdue = False
+
+        self._state = State()
 
     def init(self) -> None:
         for i in range(4):
@@ -86,8 +101,7 @@ class LegController:
         best, best_d = -1, -1.0
         for i, leg in enumerate(self.legs):
             cur = leg.get_current_leg_pos()
-            tgt = leg.get_nominal_landing_pos()
-            d = math.hypot(0 - cur.x, 0 - cur.y)
+            d = math.hypot(cur.x, cur.y)
             if d > best_d:
                 best, best_d = i, d
         return best
@@ -136,8 +150,14 @@ class LegController:
             return 0.0
         return self.legs[self.swing_leg].swing_time_remaining_s()
 
-    def update(self, dt_s: float, imu_data: Optional[ImuCorrection] = None) -> None:
+    def update(self, dt_s: float, state: State, imu_data: Optional[ImuCorrection] = None) -> None:
         self._update_twist(dt_s)
+        self._state = state
+
+        yaw = state.yaw
+        v_cmd, _ = self._cmd  # mm/s, rad/s
+
+        self._v_cmd_xy = Vec3(v_cmd * math.cos(yaw), v_cmd * math.sin(yaw), 0.0)
 
         grounded = all(leg.is_grounded() for leg in self.legs)
         if grounded and not self.grounded:
@@ -157,7 +177,11 @@ class LegController:
                     self._pick_overdue = False
                     self._last_swing_leg = nxt
                     self.swing_leg = nxt
-                    self.legs[nxt].start_swing(self.legs[nxt].get_nominal_landing_pos())
+                    self.legs[nxt].start_swing(self.legs[nxt].get_nominal_landing_pos(
+                        v_act=Vec3(self._state.linear_vel[0] * 1e3, self._state.linear_vel[1] * 1e3, 0.0),
+                        v_cmd=self._v_cmd_xy,
+                        h=max(float(self._state.pos[2]) * 1e3, 1.0)
+                    ))
                 else:                                    # STOPPING, gap closed
                     self._set_state(GaitState.IDLE)
 
@@ -190,7 +214,6 @@ class LegController:
             out.append((last, t_next, t_next + T))
             t_next += T + G
         return out
-        return out
     
     def apply_mpc_corrections(self, offsets_lf: List[Vec3]) -> None:
         """Hand each leg its MPC foot OFFSET (leg frame, mm).
@@ -213,7 +236,11 @@ class LegController:
 
         The MPC horizon can span several swings (the gait is one leg at a time),
         so any leg may land inside it -- not only the currently airborne one."""
-        return [leg_to_body_frame(i, self.legs[i].get_nominal_landing_pos()) for i in range(4)]
+        return [leg_to_body_frame(i, self.legs[i].get_nominal_landing_pos(
+            v_act=Vec3(self._state.linear_vel[0] * 1e3, self._state.linear_vel[1] * 1e3, 0.0),
+            v_cmd=self._v_cmd_xy,
+            h=max(float(self._state.pos[2]) * 1e3, 1.0)
+        )) for i in range(4)]
 
     def export_angle_log(self, ids: List[int]=[0, 1, 2, 3]) -> None:
         for i in ids:

@@ -58,21 +58,6 @@ def clamp_to_limits(angles_deg: Theta3, leg_idx: int) -> Theta3:
     )
 
 
-# def outside_servo_limits(angles_deg: Theta3, leg_idx: int) -> bool:
-#     # NOTE: the C++ original returns False when a limit is exceeded and True
-#     # when everything is in range -- the opposite of its name. Ported
-#     # faithfully; it is unused. Flip the booleans if you intend to use it.
-#     lim = ServoConfig.limits[leg_idx]
-
-#     if angles_deg.coxa > lim.coxa.max_deg or angles_deg.coxa < lim.coxa.min_deg:
-#         return False
-#     if angles_deg.femur > lim.femur.max_deg or angles_deg.femur < lim.femur.min_deg:
-#         return False
-#     if angles_deg.tibia > lim.tibia.max_deg or angles_deg.tibia < lim.tibia.min_deg:
-#         return False
-#     return True
-
-
 def _is_right_leg(leg_id: int) -> bool:
     return leg_id == 1 or leg_id == 2
 
@@ -80,9 +65,12 @@ def _is_right_leg(leg_id: int) -> bool:
 def _is_front_leg(leg_id: int) -> bool:
     return leg_id == 0 or leg_id == 1
 
-
-def _smoothstep(t: float) -> float:
-    return t * t * (3.0 - 2.0 * t)
+# cubic Hermite in xy whose end velocities equal the stance sweep
+def _hermite(p0, p1, v0, v1, T, t):          # t in [0,1], velocities in mm/s
+    t2, t3 = t*t, t*t*t
+    h00, h10 = 2*t3 - 3*t2 + 1, t3 - 2*t2 + t
+    h01, h11 = -2*t3 + 3*t2,    t3 - t2
+    return h00*p0 + h10*T*v0 + h01*p1 + h11*T*v1
 
 
 class Leg:
@@ -141,10 +129,18 @@ class Leg:
         p.y += self.step_vec.y / 2.0
         return p
 
-    def get_nominal_landing_pos(self) -> Vec3:
+    def get_nominal_landing_pos(self, v_act, v_cmd, h: float, k: float = 1.0) -> Vec3:
         p = Offset.neutral_foot_pos_lf[self.id].copy()
+
         p.x -= self.step_vec.x / 2.0
         p.y -= self.step_vec.y / 2.0
+        omega = math.sqrt(9.81 * 1e3 / h)
+
+        p.x += k * (v_act.x - v_cmd.x) / omega       # k ~ 0.5..1
+        p.y += k * (v_act.y - v_cmd.y) / omega
+
+        if self.id == 0:
+            print(k * (v_act.x - v_cmd.x) / omega)
         return p
     
     def swing_time_remaining_s(self) -> float:
@@ -339,13 +335,25 @@ class Leg:
         start = self.pos_state.swing_start_pos_lf
         target = self.pos_state.swing_target_pos_lf
 
-        alpha = _smoothstep(t)
         foot = self.pos_state.foot_target_pos_lf
-        foot.x = start.x + alpha * (target.x - start.x)
-        foot.y = start.y + alpha * (target.y - start.y)
+        sv = self.stance_vel
+        foot.x = _hermite(start.x, target.x, sv.x, sv.x, Movement.SWING_DURATION_S, t)
+        foot.y = _hermite(start.y, target.y, sv.y, sv.y, Movement.SWING_DURATION_S, t)
 
         # lift the foot above the start-to-target line
         clearance = Movement.STEP_HEIGHT_MM * math.sin(math.pi * t) ** 1
+        # Asymmetric lift: fast ascent, gentle descent
+        LIFT_FRACTION = 0.30
+
+        if t < LIFT_FRACTION:
+            # Fast lift: ease out toward maximum height
+            u = t / LIFT_FRACTION
+            clearance = Movement.STEP_HEIGHT_MM * (1.0 - (1.0 - u) ** 2)
+        else:
+            # Gentle descent: ease in toward ground level
+            u = (t - LIFT_FRACTION) / (1.0 - LIFT_FRACTION)
+            clearance = Movement.STEP_HEIGHT_MM * (1.0 - u ** 2)
+
         foot.z = (start.z + t * (target.z - start.z)) + clearance
 
         if t >= 1.0:

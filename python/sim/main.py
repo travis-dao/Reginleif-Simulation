@@ -165,10 +165,11 @@ def sim():
             
             state.update(
                 swing_leg=Movement.index_name(controller.swing_leg),
-                next_swing_leg=Movement.index_name(controller.next_swing_leg()),
+                # next_swing_leg=Movement.index_name(controller.next_swing_leg()),
                 gait=Movement.order_name(controller._order),
                 vel_cmd=core.v_cmd_mps * 1e3,
                 vel_real=controller._v,
+                vel_est=core.estimator.state.linear_vel[0] * 1e3,
                 yaw_cmd=core.yaw_rate_cmd,
                 yaw_real=controller._w,
             )
@@ -196,7 +197,8 @@ def sim():
             pid_out = stabilizer.update(dt_s=dt)
 
             # Update each leg, apply PID correction, and command MuJoCo joints.
-            controller.update(dt, pid_out)
+            controller.update(dt_s=dt, state=core.estimator.state, imu_data=pid_out)
+            # print(core.estimator.state)
 
             # Advance physics using the newly commanded joint angles.
             mujoco.mj_step(model, data)

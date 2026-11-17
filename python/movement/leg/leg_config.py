@@ -82,7 +82,7 @@ class Movement:
     STEP_LENGTH_MM = 100.0
     STEP_HEIGHT_MM = 70.0
     SWING_DURATION_S = 0.3
-    GAP_DURATION_S = SWING_DURATION_S / 6 # 1/4 of swing duration seems to work well
+    GAP_DURATION_S = SWING_DURATION_S / 8 # 1/4 of swing duration seems to work well
 
     # indexed by (current swing leg + 1); index 0 is "no leg yet" (-1)
     ORDER_WALK_F: Tuple[int, ...] = (0, 2, 1, 3)

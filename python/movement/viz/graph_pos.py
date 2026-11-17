@@ -11,7 +11,6 @@ sys.path.insert(0, str(PYTHON_DIR))
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from movement.leg.leg_config import Movement
 
 CSV_PATH = Path("python/movement/logs/leg0_foot_pos.csv")
 
@@ -21,7 +20,8 @@ PREFIX = ["target", "final"]
 MAX_SAMPLES = 5000
 
 df = pd.read_csv(CSV_PATH, dtype=float)
-df = df[df["time_s"] >= 1.5]
+df = df[df["time_s"] >= 2]
+df = df[df["time_s"] <= 6]
 df = df.iloc[:MAX_SAMPLES]  # limit number of samples to plot
 
 time = df.iloc[:, 0] # time
