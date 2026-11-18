@@ -50,12 +50,21 @@ class LegController:
         self.grounded = False
         self.swing_leg = -1
         self._last_swing_leg = -1
-        self.gap_remaining_s = 0.0
 
         self.state = GaitState.IDLE
 
+        T, G = Movement.SWING_DURATION_S, Movement.GAP_DURATION_S
+        self.duty_zheta = 2.7 # 5.0
+        self.duty = 1.0 - T / (self.duty_zheta * (T + G))      # >=0.75 = no overlap, <0.75 = overlap
+        self.period_s = T / (1.0 - self.duty)
+        self.t_stance_s = self.duty * self.period_s
+        self.v_max_mm_s = Movement.STEP_LENGTH_MM / self.t_stance_s
+
+        self._psi = [0.0] * 4          # per-leg clock; the leg swings when it wraps past 1
+        self._grounded_s = 0.0         # time since the last swing ended (replaces gap_remaining_s)
+        self.start_push_s = 0.0
+
         self._nom_bf = [leg_to_body_frame(i, Offset.neutral_foot_pos_lf[i]) for i in range(4)]
-        self.t_stance_s = 3.0 * Movement.SWING_DURATION_S + 4.0 * Movement.GAP_DURATION_S
         self.v_max_mm_s = Movement.STEP_LENGTH_MM / self.t_stance_s
         self.max_step_y_mm = 80.0            # tune: sideways reach of the coxa
         self.a_v_mm_s2 = 150.0               # twist slew limits, tune
@@ -70,7 +79,6 @@ class LegController:
         self.turn_w_eps = 0.02 #rad/s
 
         self._order = Movement.ORDER_WALK_F
-        self._pick_overdue = False
 
         self._state = State()
         self.body_roll = 0.0
@@ -115,11 +123,6 @@ class LegController:
                 best, best_d = i, d
         return best
 
-    def next_swing_leg(self) -> int:
-        if self._pick_overdue:
-            return self._most_overdue_leg()
-        return self._after(self._last_swing_leg)
-
     def _select_order(self):
         v, w = self._cmd                      # use the *command*, not the ramping achieved twist
         if abs(v) < self.turn_v_eps and abs(w) > self.turn_w_eps:
@@ -137,13 +140,30 @@ class LegController:
     # transitions
     def _set_state(self, new: GaitState) -> None:
         old, self.state = self.state, new
+        G = Movement.GAP_DURATION_S
 
-        if old is GaitState.IDLE and new is GaitState.WALKING:
+        if new is GaitState.WALKING and old is GaitState.IDLE:
             for leg in self.legs:
                 leg.resume_stance()
-            self.gap_remaining_s = 0.0               # first swing starts immediately
+            order = self._select_order()
+            changed = order is not self._order
+            self._order = order
+            first = (self._most_overdue_leg() if changed and self._last_swing_leg >= 0 else self._after(self._last_swing_leg))
+            push = self.start_push_s if (order is Movement.ORDER_WALK_F or order is Movement.ORDER_WALK_B) else 0.0
+            self._schedule_from(first, push)
+
+        elif new is GaitState.WALKING and old is GaitState.STOPPING:
+            # resume the clock where the gap left off (or after the in-flight swing + gap)
+            if self.swing_leg >= 0:
+                delay = self.swing_time_remaining_s() + G
+            else:
+                delay = max(G - self._grounded_s, 0.0)
+            self._schedule_from(self._after(self._last_swing_leg), delay)
 
         elif new is GaitState.IDLE:
+            self.swing_leg = -1
+            for leg in self.legs:
+                leg.hold()
             self.swing_leg = -1
             for leg in self.legs:
                 leg.hold()                           # NEW in Leg: freeze at current pos
@@ -159,69 +179,54 @@ class LegController:
             return 0.0
         return self.legs[self.swing_leg].swing_time_remaining_s()
 
-    def update(self, dt_s: float, state: State, imu_data: Optional[ImuCorrection] = None) -> None:
+    def update(self, dt_s: float, state: State, imu_data:ImuCorrection=None):
         self._update_twist(dt_s)
         self._state = state
 
         yaw = state.yaw
-        v_cmd, _ = self._cmd  # mm/s, rad/s
-
+        v_cmd, _ = self._cmd
         self._v_cmd_xy = Vec3(v_cmd * math.cos(yaw), v_cmd * math.sin(yaw), 0.0)
 
         grounded = all(leg.is_grounded() for leg in self.legs)
-        if grounded and not self.grounded:
+        self._grounded_s = self._grounded_s + dt_s if grounded else 0.0
+
+        if grounded and not self.grounded:               # a swing just finished
             self.swing_leg = -1
-            self.gap_remaining_s = Movement.GAP_DURATION_S
             new_order = self._select_order()
             if new_order is not self._order:
                 self._order = new_order
-                self._pick_overdue = self._last_swing_leg >= 0
+                if self._last_swing_leg >= 0:
+                    # keep the time to the next swing, but re-sequence from the most overdue leg
+                    remaining = min((1.0 - p) for p in self._psi) * self.period_s
+                    self._schedule_from(self._most_overdue_leg(), remaining)
         self.grounded = grounded
 
-        if self.grounded and self.state is not GaitState.IDLE:
-            self.gap_remaining_s -= dt_s
-            if self.gap_remaining_s <= 0.0:
-                if self.state is GaitState.WALKING:
-                    nxt = self.next_swing_leg()
-                    self._pick_overdue = False
-                    self._last_swing_leg = nxt
-                    self.swing_leg = nxt
-                    self.legs[nxt].start_swing(self.legs[nxt].get_nominal_landing_pos(
-                        v_act=Vec3(self._state.linear_vel[0] * 1e3, self._state.linear_vel[1] * 1e3, 0.0),
-                        v_cmd=self._v_cmd_xy,
-                        h=max(float(self._state.pos[2]) * 1e3, 1.0)
-                    ))
-                else:                                    # STOPPING, gap closed
-                    self._set_state(GaitState.IDLE)
+        if self.state is GaitState.WALKING:
+            self._advance_clock(dt_s)
+        elif self.state is GaitState.STOPPING:
+            # clock frozen: no new swings, finish the one in flight, then idle after a gap
+            if self.grounded and self._grounded_s >= Movement.GAP_DURATION_S:
+                self._set_state(GaitState.IDLE)
 
-        self.update_driver(dt_s, imu_data)
-
-    def update_driver(self, dt_s: float, imu_data: ImuCorrection):
         for i in range(4):
             self.target_angles[i] = self.legs[i].update(dt_s, imu_data)
             self.driver.set_angles(i, self.target_angles[i])
-    
+
     def swing_schedule(self, horizon_s: float):
         if self.state is GaitState.IDLE:
             return []
-        T, G = Movement.SWING_DURATION_S, Movement.GAP_DURATION_S
+        T, P = Movement.SWING_DURATION_S, self.period_s
         out = []
-        if self.swing_leg >= 0:
-            t_end = self.swing_time_remaining_s()
-            out.append((self.swing_leg, 0.0, t_end))
-            t_next = t_end + G
-        else:
-            t_next = max(self.gap_remaining_s, 0.0)
-        if self.state is GaitState.STOPPING:
-            return out                               # only the swing already in flight
-
-        last = self._last_swing_leg
-        first = self._most_overdue_leg() if self._pick_overdue else None
-        while t_next < horizon_s:
-            last = first if first is not None else self._after(last)
-            first = None
-            out.append((last, t_next, t_next + T))
-            t_next += T + G
+        for i, leg in enumerate(self.legs):
+            if not leg.is_grounded():
+                out.append((i, 0.0, leg.swing_time_remaining_s()))
+            if self.state is GaitState.STOPPING:
+                continue                                  # only swings already in flight
+            t = (1.0 - self._psi[i]) * P                  # time until this leg's next swing
+            while t < horizon_s:
+                out.append((i, t, t + T))
+                t += P
+        out.sort(key=lambda s: s[1])
         return out
     
     def apply_mpc_corrections(self, offsets_lf: List[Vec3]) -> None:
@@ -288,3 +293,32 @@ class LegController:
             vel = Vec3(-(self._v - self._w * p.y), -(self._w * p.x), 0.0)
             step = Vec3(-(vg - wg * p.y) * T, -(wg * p.x) * T, 0.0)
             leg.set_stance(vel, step)
+
+    def _schedule_from(self, first: int, delay_s: float) -> None:
+        """Make `first` swing in delay_s, then the rest in order, a quarter period apart."""
+        o = self._order
+        i0 = o.index(first)
+        tau0 = delay_s / self.period_s
+        for j in range(4):
+            # psi may go negative: that just means "fires later than one period from now"
+            self._psi[o[(i0 + j) % 4]] = 1.0 - (tau0 + j / 4.0)
+
+    def _advance_clock(self, dt_s: float) -> None:
+        dphase = dt_s / self.period_s
+        for i, leg in enumerate(self.legs):
+            self._psi[i] += dphase
+
+            if self._psi[i] >= 1.0:
+                self._psi[i] -= 1.0
+
+                if leg.is_grounded():
+                    self._start_swing(i)
+
+    def _start_swing(self, i: int) -> None:
+        self._last_swing_leg = i
+        self.swing_leg = i
+        self.legs[i].start_swing(self.legs[i].get_nominal_landing_pos(
+            v_act=Vec3(self._state.linear_vel[0] * 1e3, self._state.linear_vel[1] * 1e3, 0.0),
+            v_cmd=self._v_cmd_xy,
+            h=max(float(self._state.pos[2]) * 1e3, 1.0),
+        ))

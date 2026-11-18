@@ -90,7 +90,7 @@ stabilizer = Stabilizer(Config(
 
 # z_des is latched from the measured standing height once the robot has settled
 core = Core(mpc_solver, controller, z_des_m=0.0, solve_period_s=MPC_DT,
-            gain_mm_per_n=MPC_GAIN, gravity_z_mps2=float(model.opt.gravity[2]))
+            gain_mm_per_n=MPC_GAIN, gravity_z_mps2=float(model.opt.gravity[2]), ramp_s=0.1)
 
 # start the estimator at the known spawn pose (the estimate lives in this world frame from here on)
 _jnt = model.body_jntadr[body_id]
@@ -165,7 +165,6 @@ def sim():
             
             state.update(
                 swing_leg=Movement.index_name(controller.swing_leg),
-                # next_swing_leg=Movement.index_name(controller.next_swing_leg()),
                 gait=Movement.order_name(controller._order),
                 vel_cmd=core.v_cmd_mps * 1e3,
                 vel_real=controller._v,
@@ -173,7 +172,8 @@ def sim():
                 yaw_cmd=core.yaw_rate_cmd,
                 yaw_real=controller._w,
                 roll_des=np.rad2deg(core.roll_des),
-                pitch_des=np.rad2deg(core.pitch_des)
+                pitch_des=np.rad2deg(core.pitch_des),
+                leg_duty=controller.duty
             )
 
             # Engage MPC once the robot has settled.
@@ -233,4 +233,4 @@ if __name__ == "__main__":
             core.export_log()
 
         if "pos" in args.export:
-            controller.export_pos_log([0])
+            controller.export_pos_log()

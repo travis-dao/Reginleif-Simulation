@@ -79,8 +79,8 @@ c_min = abs(FEMUR_LENGTH_MM - TIBIA_LENGTH_MM)
 
 
 class Movement:
-    STEP_LENGTH_MM = 100.0
-    STEP_HEIGHT_MM = 70.0
+    STEP_LENGTH_MM = 80.0
+    STEP_HEIGHT_MM = 60.0
     SWING_DURATION_S = 0.3
     GAP_DURATION_S = SWING_DURATION_S / 4 # 1/4 of swing duration seems to work well
 
@@ -108,7 +108,7 @@ class Movement:
         }.get(index, "Unknown")
 
 
-_FOOT_NEUTRAL_MAG = Vec3(120.0, 110.0, -30.0)
+_FOOT_NEUTRAL_MAG = Vec3(100.0, 100.0, -30.0)
 _LEG_BASE_MAG = Vec3(34.0, 43.5, 0.0)
 _QUADRANT_SIGN = (
     Vec3(+1, +1, +1),  # Front Left

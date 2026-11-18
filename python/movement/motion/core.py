@@ -51,7 +51,7 @@ class Core:
         solve_period_s: float = 0.03,
         gain_mm_per_n: float = 1.0,
         max_corr_mm: float = 12.0,
-        ramp_s: float = 2.0,
+        ramp_s: float = 1.0,
         gravity_z_mps2: float = -9.81,
     ):
         self.mpc = mpc
@@ -188,8 +188,8 @@ class Core:
         a = (v - self._v_prev) / max(dt_s, 1e-6)
         self._v_prev = v
         self.roll_des, self.pitch_des = self.posture.update(dt_s, v, w, a)
-        if self.v_cmd_mps < 0:
-            self.pitch_des = np.deg2rad(10)
+        # if self.v_cmd_mps < 0:
+        #     self.pitch_des = np.deg2rad(10)
         self.lc.set_body_tilt(self.roll_des, self.pitch_des)
 
     def export_log(self, filepath="python/movement/logs/mpc.csv"):
