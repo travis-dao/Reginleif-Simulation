@@ -354,7 +354,6 @@ class Leg:
         foot.y = _hermite(start.y, target.y, sv.y, sv.y, Movement.SWING_DURATION_S, t)
 
         # lift the foot above the start-to-target line
-        clearance = Movement.STEP_HEIGHT_MM * math.sin(math.pi * t) ** 1
         # Asymmetric lift: fast ascent, gentle descent
         LIFT_FRACTION = 0.30
 

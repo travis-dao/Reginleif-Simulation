@@ -164,9 +164,6 @@ class LegController:
             self.swing_leg = -1
             for leg in self.legs:
                 leg.hold()
-            self.swing_leg = -1
-            for leg in self.legs:
-                leg.hold()                           # NEW in Leg: freeze at current pos
 
     def is_grounded(self) -> bool:
         return self.grounded
