@@ -39,14 +39,14 @@ class LegState(Enum):
 
 @dataclass
 class FootPositionState:
-    foot_curr_pos_lf: Vec3
-    foot_target_pos_lf: Vec3
+    curr: Vec3
+    target: Vec3
 
-    swing_start_pos_lf: Vec3
-    swing_target_pos_lf: Vec3
+    swing_start: Vec3
+    swing_target: Vec3
 
-    stance_start_pos_lf: Vec3
-    stance_target_pos_lf: Vec3
+    stance_start: Vec3
+    stance_target: Vec3
 
 
 def clamp_to_limits(angles_deg: Theta3, leg_idx: int) -> Theta3:
@@ -81,13 +81,13 @@ class Leg:
 
         self.id = leg_id
 
-        self.pos_state = FootPositionState(
-            foot_curr_pos_lf=neutral.copy(),
-            foot_target_pos_lf=neutral.copy(),
-            swing_start_pos_lf=neutral.copy(),
-            swing_target_pos_lf=neutral.copy(),
-            stance_start_pos_lf=neutral.copy(),
-            stance_target_pos_lf=neutral.copy(),
+        self.foot_state = FootPositionState(
+            curr=neutral.copy(),
+            target=neutral.copy(),
+            swing_start=neutral.copy(),
+            swing_target=neutral.copy(),
+            stance_start=neutral.copy(),
+            stance_target=neutral.copy(),
         )
 
         self.swing_phase = 0.0
@@ -101,7 +101,7 @@ class Leg:
         self._mpc_offset_cmd = Vec3(0.0, 0.0, 0.0)
 
         self.stance_vel = Vec3(0.0, 0.0, 0.0)                       # mm/s: live sweep velocity
-        self.step_vec = Vec3(-Movement.STEP_LENGTH_MM, 0.0, 0.0)    # mm: foot displacement over one stance
+        self.step_vec = Vec3(Movement.STEP_LENGTH_MM, 0.0, 0.0)    # mm: foot displacement over one stance
 
         self.angle_log = []
         self.foot_pos_log = []
@@ -118,7 +118,7 @@ class Leg:
         return self.leg_state != LegState.SWING
 
     def get_current_leg_pos(self) -> Vec3:
-        return self.pos_state.foot_curr_pos_lf
+        return self.foot_state.curr
 
     def set_stance(self, vel: Vec3, step: Vec3) -> None:
         self.stance_vel = vel.copy()
@@ -130,19 +130,19 @@ class Leg:
 
     def get_rear_pos(self) -> Vec3:
         p = Offset.neutral_foot_pos_lf[self.id].copy()
-        p.x += self.step_vec.x / 2.0
-        p.y += self.step_vec.y / 2.0
-        return p
-
-    def get_nominal_landing_pos(self, v_act, v_cmd, h: float, k: float = 1.0) -> Vec3:
-        p = Offset.neutral_foot_pos_lf[self.id].copy()
-
         p.x -= self.step_vec.x / 2.0
         p.y -= self.step_vec.y / 2.0
+        return p
+
+    def get_nominal_landing_pos(self, v_act, v_cmd, h: float, k: float = 0.5) -> Vec3:
+        p = Offset.neutral_foot_pos_lf[self.id].copy()
+
+        p.x += self.step_vec.x / 2.0
+        p.y += self.step_vec.y / 2.0
         omega = math.sqrt(9.81 * 1e3 / h)
 
-        p.x += k * (v_act.x - v_cmd.x) / omega       # k ~ 0.5..1
-        p.y += k * (v_act.y - v_cmd.y) / omega
+        p.x -= k * (v_act.x - v_cmd.x) / omega       # k ~ 0.5..1
+        p.y -= k * (v_act.y - v_cmd.y) / omega
 
         return p
     
@@ -156,14 +156,14 @@ class Leg:
         self._mpc_offset_cmd = offset_lf.copy()
 
     def start_swing(self, target_pos_lf: Vec3) -> None:
-        self.pos_state.swing_start_pos_lf = self.pos_state.foot_target_pos_lf.copy()
-        self.pos_state.swing_target_pos_lf = target_pos_lf.copy()
+        self.foot_state.swing_start = self.foot_state.target.copy()
+        self.foot_state.swing_target = target_pos_lf.copy()
         self.swing_phase = 0.0
         self._set_state(LegState.SWING)
 
     def start_stance(self, target_pos_lf: Vec3) -> None:
-        self.pos_state.stance_start_pos_lf = self.pos_state.foot_target_pos_lf.copy()
-        self.pos_state.stance_target_pos_lf = (
+        self.foot_state.stance_start = self.foot_state.target.copy()
+        self.foot_state.stance_target = (
             target_pos_lf.copy() if target_pos_lf is not None else self.get_rear_pos()
         )
         self.stance_phase = 0.0
@@ -191,9 +191,9 @@ class Leg:
             self._update_stance(dt_s)
             # self.pid_correction(imu_data)
         elif self.leg_state == LegState.PAUSE:
-            pass                                   # keep foot_target_pos_lf as is
+            pass                                   # keep target as is
         else:                                      # HOLD
-            self.pos_state.foot_target_pos_lf = Offset.neutral_foot_pos_lf[self.id].copy()
+            self.foot_state.target = Offset.neutral_foot_pos_lf[self.id].copy()
 
         # low-pass the MPC offset; swing legs carry no ground force -> decay to 0
         zero = Vec3(0.0, 0.0, 0.0)
@@ -203,7 +203,7 @@ class Leg:
         # print(f"{self.id} | offset={self.mpc_offset_lf}")
 
         # nominal gait position: never modified by PID or MPC
-        p_ik = self.pos_state.foot_target_pos_lf.copy()
+        p_ik = self.foot_state.target.copy()
 
         # if self.leg_state == LegState.STANCE and imu_data and imu_data.valid:
         #     p_ik.rotate(imu_data.rot_mat)          # rotate a throwaway copy only
@@ -219,7 +219,7 @@ class Leg:
             # print(f"after={p_ik}")
 
         # curr = where the foot is commanded (trajectory + PID + MPC offset)
-        self.pos_state.foot_curr_pos_lf = p_ik + self.mpc_offset_lf
+        self.foot_state.curr = p_ik + self.mpc_offset_lf
         self._log_foot_pos()
 
         self._move_leg()
@@ -273,7 +273,7 @@ class Leg:
         # servos frozen at their old angles) retry with less offset, then none.
         angles = None
 
-        target = self.pos_state.foot_curr_pos_lf.copy()
+        target = self.foot_state.curr.copy()
         target.y *= -1.0 if _is_right_leg(self.id) else 1.0  # flip y for right-side legs
         angles = IK.solve(
             target=target,
@@ -310,17 +310,17 @@ class Leg:
     def _log_foot_pos(self):
         row = {}
         row[f"time_s"] = self.time_s
-        row[f"target_x"] = self.pos_state.foot_target_pos_lf.x
+        row[f"target_x"] = self.foot_state.target.x
         row[f"offset_x"] = self.mpc_offset_lf.x
-        row[f"final_x"] = self.pos_state.foot_curr_pos_lf.x
+        row[f"final_x"] = self.foot_state.curr.x
 
-        row[f"target_y"] = self.pos_state.foot_target_pos_lf.y
+        row[f"target_y"] = self.foot_state.target.y
         row[f"offset_y"] = self.mpc_offset_lf.y
-        row[f"final_y"] = self.pos_state.foot_curr_pos_lf.y
+        row[f"final_y"] = self.foot_state.curr.y
 
-        row[f"target_z"] = self.pos_state.foot_target_pos_lf.z
+        row[f"target_z"] = self.foot_state.target.z
         row[f"offset_z"] = self.mpc_offset_lf.z
-        row[f"final_z"] = self.pos_state.foot_curr_pos_lf.z
+        row[f"final_z"] = self.foot_state.curr.z
         
         row[f"swinging"] = 1 if self.leg_state == LegState.SWING else 0
 
@@ -328,14 +328,14 @@ class Leg:
         return
 
     def _update_stance(self, dt_s: float) -> None:
-        foot = self.pos_state.foot_target_pos_lf
+        foot = self.foot_state.target
         rear = self.get_rear_pos()
         sv = self.stance_vel
         # keep sweeping only while the rear limit is still ahead of the foot
         if (rear.x - foot.x) * sv.x + (rear.y - foot.y) * sv.y > 0.0:
             foot.x += sv.x * dt_s
             foot.y += sv.y * dt_s
-        start = self.pos_state.stance_start_pos_lf
+        start = self.foot_state.stance_start
         span = math.hypot(rear.x - start.x, rear.y - start.y)
         done = math.hypot(foot.x - start.x, foot.y - start.y)
         self.stance_phase = 1.0 if span <= 1e-6 else min(done / span, 1.0)   # debug only
@@ -345,10 +345,10 @@ class Leg:
         self.swing_phase = min(self.swing_phase, 1.0)
 
         t = self.swing_phase
-        start = self.pos_state.swing_start_pos_lf
-        target = self.pos_state.swing_target_pos_lf
+        start = self.foot_state.swing_start
+        target = self.foot_state.swing_target
 
-        foot = self.pos_state.foot_target_pos_lf
+        foot = self.foot_state.target
         sv = self.stance_vel
         foot.x = _hermite(start.x, target.x, sv.x, sv.x, Movement.SWING_DURATION_S, t)
         foot.y = _hermite(start.y, target.y, sv.y, sv.y, Movement.SWING_DURATION_S, t)
@@ -369,5 +369,5 @@ class Leg:
         foot.z = (start.z + t * (target.z - start.z)) + clearance
 
         if t >= 1.0:
-            self.pos_state.foot_target_pos_lf = target.copy()
+            self.foot_state.target = target.copy()
             self.start_stance(self.get_rear_pos())

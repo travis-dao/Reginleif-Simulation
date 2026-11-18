@@ -165,7 +165,7 @@ def sim():
             
             state.update(
                 swing_leg=Movement.index_name(controller.swing_leg),
-                gait=Movement.order_name(controller._order),
+                gait=Movement.order_name(controller._gait),
                 vel_cmd=core.v_cmd_mps * 1e3,
                 vel_real=controller._v,
                 vel_est=core.estimator.state.linear_vel[0] * 1e3,
