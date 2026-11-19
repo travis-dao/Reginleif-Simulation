@@ -62,9 +62,8 @@ class LegController:
         self.start_push_s = 0.0
 
         self._nom_bf = [leg_to_body_frame(i, Offset.neutral_foot_pos_lf[i]) for i in range(4)]
-        self.v_max_mm_s = Movement.STEP_LENGTH_MM / self.t_stance_s
         self.max_step_y_mm = 80.0            # tune: sideways reach of the coxa
-        self.a_v_mm_s2 = 150.0               # twist slew limits, tune
+        self.a_v_mm_s2 = 500.0               # twist slew limits, tune
         self.a_w_rad_s2 = 0.5
         self._cmd = (0.0, 0.0)               # requested (v mm/s, w rad/s)
         self._v_cmd_xy: Vec3 = Vec3(0.0, 0.0, 0.0)

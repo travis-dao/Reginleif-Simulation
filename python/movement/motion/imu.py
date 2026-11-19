@@ -130,7 +130,6 @@ class Imu:
         self._update_imu()
 
     def read(self) -> ImuData:
-        """MuJoCo -> ImuData. The IMU is mounted aligned with the body frame."""
         vadr = self.model.jnt_dofadr[self.model.body_jntadr[self.body_id]]
 
         R_body = self.data.xmat[self.body_id].reshape(3, 3)          # body -> world

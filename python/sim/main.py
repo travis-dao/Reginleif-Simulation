@@ -68,10 +68,10 @@ cfg = MPCConfig(
     R_weight=1e-3,                                 # larger = smoother forces, less chatter
     mu=0.4,                                        # keep <= foot friction in the XML
     # [roll pitch yaw | x y z | wx wy wz | vx vy vz | g]
-    Q_diag=np.array([10, 10, 20, 
-                     1, 1, 50, 
+    Q_diag=np.array([30, 30, 10, 
+                     1, 1, 10, 
                      1, 1, 1, 
-                     1, 1, 1, 
+                     1, 1, 20, 
                      0.0]),
 )
 mpc_solver = MPC(cfg)
