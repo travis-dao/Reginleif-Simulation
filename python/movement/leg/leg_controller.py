@@ -52,7 +52,7 @@ class LegController:
         self.move_state = MoveState.IDLE
 
         T, G = Movement.SWING_DURATION_S, Movement.GAP_DURATION_S
-        self.duty_zheta = 2.7 # 5.0
+        self.duty_zheta = 4.0 # 5.0
         self.duty = 1.0 - T / (self.duty_zheta * (T + G))      # >=0.75 = no overlap, <0.75 = overlap
         self.period_s = T / (1.0 - self.duty)
         self.t_stance_s = self.duty * self.period_s
