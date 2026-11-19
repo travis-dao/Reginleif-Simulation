@@ -1,5 +1,4 @@
 """Python port of leg_controller.h / leg_controller.cpp."""
-from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -14,7 +13,7 @@ from typing import List, Optional
 import math
 
 from .leg import Leg
-from .leg_config import ImuCorrection, Movement, Offset, Theta3, Vec3, rot_rp, transpose3
+from .leg_config import Movement, Offset, Theta3, Vec3
 from .movement import LegDriver
 from enum import Enum, auto
 from motion.mpc import State
@@ -82,6 +81,8 @@ class LegController:
         self.body_roll = 0.0
         self.body_pitch = 0.0
 
+        self.init()
+
     def init(self) -> None:
         for i in range(4):
             self.legs[i] = Leg(i)
@@ -89,13 +90,6 @@ class LegController:
     # commands
     def set_body_command(self, v_mm_s: float, w_rad_s: float) -> None:
         self._cmd = (v_mm_s, w_rad_s)
-
-    def set_body_tilt(self, roll_rad: float, pitch_rad: float) -> None:
-        """Commanded body attitude. Applied to every leg in every state."""
-        self.body_roll, self.body_pitch = roll_rad, pitch_rad
-        R_T = transpose3(rot_rp(roll_rad, pitch_rad))     # build once, share with all legs
-        for leg in self.legs:
-            leg.set_body_tilt(R_T)
 
     def body_twist(self):
         """Achieved (v mm/s, w rad/s) the stance feet are producing now."""
@@ -174,7 +168,7 @@ class LegController:
             return 0.0
         return self.legs[self.swing_leg].swing_time_remaining_s()
 
-    def update(self, dt_s: float, state: State, imu_data:ImuCorrection=None):
+    def update(self, dt_s: float, state: State):
         self._update_twist(dt_s)
         self._state = state
 
@@ -204,7 +198,7 @@ class LegController:
                 self._set_state(MoveState.IDLE)
 
         for i in range(4):
-            self.target_angles[i] = self.legs[i].update(dt_s, imu_data)
+            self.target_angles[i] = self.legs[i].update(dt_s)
             self.driver.set_angles(i, self.target_angles[i])
 
     def swing_schedule(self, horizon_s: float):
@@ -225,50 +219,22 @@ class LegController:
         return out
     
     def apply_mpc_corrections(self, offsets_lf: List[Vec3]) -> None:
-        """Hand each leg its MPC foot OFFSET (leg frame, mm).
-
-        Offsets are layered on top of the gait trajectory inside Leg.update()
-        (low-pass filtered, zeroed for the swing leg), so they are not
-        overwritten by the next trajectory tick and do not accumulate.
-        """
-        for leg, off in zip(self.legs, offsets_lf):
-            # if leg.id == 0:
-                # print(f"swing={self.swing_leg}, offset={off}")
-            leg.set_mpc_offset(off)
+        for leg, off in zip(self.legs, offsets_lf): leg.set_mpc_offset(off)
 
     def foot_positions_body(self) -> List[Vec3]:
-        """Current foot positions (trajectory + MPC offset), body frame, mm."""
         return [leg_to_body_frame(i, self.legs[i].get_current_leg_pos()) for i in range(4)]
 
-    def landing_targets_body(self) -> List[Vec3]:
-        """Nominal touchdown position of every foot, body frame, mm.
-
-        The MPC horizon can span several swings (the gait is one leg at a time),
-        so any leg may land inside it -- not only the currently airborne one."""
-        return [leg_to_body_frame(i, self.legs[i].get_nominal_landing_pos(
-            v_act=Vec3(self._state.linear_vel[0] * 1e3, self._state.linear_vel[1] * 1e3, 0.0),
-            v_cmd=self._v_cmd_xy,
-            h=max(float(self._state.pos[2]) * 1e3, 1.0)
-        )) for i in range(4)]
-
-    def export_angle_log(self, ids: List[int]=[0, 1, 2, 3]) -> None:
-        for i in ids:
-            self.legs[i].export_angle_log()
-
-    def export_pos_log(self, ids: List[int]=[0, 1, 2, 3]) -> None:
-        for i in ids:
-            self.legs[i].export_pos_log()
-
+    def landing_targets_body(self) -> List[Vec3]: 
+        return [leg_to_body_frame(i, self.legs[i].get_nominal_landing_pos()) for i in range(4)]
+    
+    """Scale (v, w) together, which keeps R = v/w"""
     def _limit(self, v, w):
-        """Scale (v, w) together, which keeps R = v/w, so every step stays in the workspace."""
         T = self.t_stance_s
         k = 1.0
         for p in self._nom_bf:
             sx = abs(v - w * p.y) * T
             sy = abs(w * p.x) * T
-            k = min(k,
-                    Movement.STEP_LENGTH_MM / sx if sx > 1e-9 else 1.0,
-                    self.max_step_y_mm / sy if sy > 1e-9 else 1.0)
+            k = min(k, Movement.STEP_LENGTH_MM / sx if sx > 1e-9 else 1.0, self.max_step_y_mm / sy if sy > 1e-9 else 1.0)
         return v * k, w * k
 
     def _update_twist(self, dt_s: float) -> None:
@@ -312,8 +278,4 @@ class LegController:
     def _start_swing(self, i: int) -> None:
         self._last_swing_leg = i
         self.swing_leg = i
-        self.legs[i].start_swing(self.legs[i].get_nominal_landing_pos(
-            v_act=Vec3(self._state.linear_vel[0] * 1e3, self._state.linear_vel[1] * 1e3, 0.0),
-            v_cmd=self._v_cmd_xy,
-            h=max(float(self._state.pos[2]) * 1e3, 1.0),
-        ))
+        self.legs[i].start_swing(self.legs[i].get_nominal_landing_pos());

@@ -8,7 +8,6 @@ The QP backend is OSQP (the C++ uses a cvxpygen solver; the problem is identical
 
     python python/mpc.py
 """
-from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field

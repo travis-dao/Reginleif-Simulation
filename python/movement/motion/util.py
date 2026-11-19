@@ -98,14 +98,6 @@ def rotation_matrix_yaw(yaw: float) -> np.ndarray:
         [0.0, 0.0, 1.0],
     ])
 
-def rotation_matrix_rpy(roll, pitch, yaw):
-    cr, sr, cp, sp_, cy, sy = (math.cos(roll), math.sin(roll), math.cos(pitch),
-                               math.sin(pitch), math.cos(yaw), math.sin(yaw))
-    Rz = np.array([[cy,-sy,0],[sy,cy,0],[0,0,1]])
-    Ry = np.array([[cp,0,sp_],[0,1,0],[-sp_,0,cp]])
-    Rx = np.array([[1,0,0],[0,cr,-sr],[0,sr,cr]])
-    return Rz @ Ry @ Rx
-
 def legToBodyFrame(leg_idx: int, foot_pos_lf: Vec3) -> Vec3:
     return Offset.leg_base_pos_bf[leg_idx] + foot_pos_lf
 
@@ -121,10 +113,7 @@ def legToWorldFrame(leg_idx: int, foot_pos_lf: Vec3, body_pos_wf: Vec3, yaw: flo
 
     return Vec3(float(p_w[0]), float(p_w[1]), float(p_w[2]))
 
-def world_vector_to_leg_frame(
-    vector_wf: Vec3,
-    yaw: float,
-) -> Vec3:
+def world_vector_to_leg_frame(vector_wf: Vec3, yaw: float) -> Vec3:
     """Rotate a vector from world axes into body-aligned leg axes.
 
     This transforms a displacement vector, so no translations are applied.

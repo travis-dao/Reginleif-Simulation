@@ -20,7 +20,6 @@ Reported (policy vs teacher): falls, survival time, forward-velocity and yaw-rat
 least-squares gain), standing drift, body tilt, height variation and action jitter. Compare the policy
 to the teacher, not to the command: the gait itself ramps and saturates the commanded twist.
 """
-from __future__ import annotations
 
 import argparse
 import importlib.util
@@ -177,7 +176,7 @@ def run_episode(args, mode: str, seed: int, bundle, show: bool = False) -> dict:
                     mpc_active = True
                 if mpc_active:
                     core.step(dt, t)
-                pid_out = sim.stabilizer.update(dt_s=dt)
+                pid_out = sim.imu.update(dt_s=dt)
                 sim.controller.update(dt_s=dt, state=core.estimator.state, imu_data=pid_out)
                 if record:
                     act = np.clip((d.ctrl[sim.act_ids] - q_default) / scale, -1.0, 1.0)

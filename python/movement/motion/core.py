@@ -1,32 +1,25 @@
 """Glue between LegController (mm, body frame, leg-by-leg gait) and MPC (m, N, world frame).
 
 Per control tick:
-    imu = make_imu(model, data, body_id)    # sim only: MuJoCo stands in for the IMU
     s = core.estimate(dt, imu)              # state estimator (Kalman filter), EVERY tick
     core.step(dt, data.time)                # solve MPC (every solve_period) -> push foot offsets
     leg_ctrl.update(dt, imu)                # gait + offsets -> servo angles
     leg_ctrl.update_model_angles()
 """
-from __future__ import annotations
 
 from typing import List, Optional
-import csv
-from pathlib import Path
 from enum import Enum, auto
 
 import numpy as np
-import math
 
-from movement.leg.leg_config import Movement, Vec3
+from movement.leg.leg_config import Vec3
 from movement.leg.leg_controller import LegController
 from movement.motion.mpc import MPC, MPCProblem, MPCResult, State, NX, NUM_LEGS
 from movement.motion.util import (
     foot_forces_to_positions,
     rotation_matrix_yaw,
-    rotation_matrix_rpy,
     world_vector_to_leg_frame,
 )
-from movement.motion.posture import PostureShaper
 from movement.motion.state_estimator import StateEstimator, EstimatorConfig, ImuData
 
 MM = 1e-3
@@ -75,9 +68,6 @@ class Core:
         self._t_since = 1e9
         self.last_result: Optional[MPCResult] = None
 
-        self.log = []
-        self.force_csv_path = Path("python/movement/logs/mpc_ground_forces.csv")
-
         # State estimation lives in the motion subsystem: pos / linear_vel are estimated from
         # leg kinematics + the gait's swing leg; orientation / gyro come from the IMU.
         self.estimator = StateEstimator(EstimatorConfig(
@@ -87,9 +77,7 @@ class Core:
         ))
         self.state: State = self.estimator.state
 
-        self.posture = PostureShaper()
         self._v_prev = 0.0
-        self.roll_des = self.pitch_des = 0.0
 
     # ------------------------------------------------------------------
     def reset(self, p0: np.ndarray, v0: np.ndarray, imu: ImuData) -> None:
@@ -107,18 +95,16 @@ class Core:
         return np.array([_v_m(p) for p in self.lc.foot_positions_body()])
 
     # ------------------------------------------------------------------
-    def step(self, dt_s: float, time_s: float) -> Optional[MPCResult]:
+    def step(self, dt_s: float) -> Optional[MPCResult]:
         """MPC tick; solves from the latest estimate() every solve_period."""
         self._t_since += dt_s
         self._t_engaged += dt_s
-        self._update_posture(dt_s)
         if self._t_since < self.period:
             return self.last_result
 
         elapsed = self._t_since
         self._t_since = 0.0
         s0 = self.state
-        feet_world = self._foot_positions_world(s0)
         self.lc.set_body_command(self.v_cmd_mps / MM, self.yaw_rate_cmd)
         self._update_mode(s0)
 
@@ -134,82 +120,11 @@ class Core:
         res = self.mpc.solve(MPCProblem(x0=s0, x_ref=x_ref, foot_rel_pos=feet, contact=contact))
         self.last_result = res
         if res.success:  # on failure keep the last good offsets
-            swing_leg = self.lc.get_swing_leg()
-            forces = np.asarray(
-                res.u0.foot_ground_force, dtype=float
-            ).reshape(4, 3)
-
-            # Print swing leg and ground reaction forces
-            leg_names = ["FL", "FR", "BR", "BL"]
-            swing_name = (
-                leg_names[swing_leg]
-                if 0 <= swing_leg < 4
-                else "NONE"
-            )
-
-            # One row per successful MPC solve.
-            row = {
-                "time_s": float(time_s),
-                "swing_leg": swing_name,
-                "swing_leg_id": int(swing_leg),
-                "yaw_rad": float(s0.yaw),
-            }
-
-            row["com_x_m"] = float(s0.pos[0])
-            row["com_y_m"] = float(s0.pos[1])
-            row["com_z_m"] = float(s0.pos[2])
-
-            row["roll"] = float(s0.roll)
-            row["pitch"] = float(s0.pitch)
-            row["yaw"] = float(s0.yaw)
-
-            for i, name in enumerate(["FL", "FR", "BR", "BL"]):
-                # World-frame foot position, metres.
-                row[f"{name}_x_m"] = float(feet_world[i, 0])
-                row[f"{name}_y_m"] = float(feet_world[i, 1])
-                row[f"{name}_z_m"] = float(feet_world[i, 2])
-
-                # Optimized ground reaction force, newtons.
-                row[f"{name}_Fx_N"] = float(forces[i, 0])
-                row[f"{name}_Fy_N"] = float(forces[i, 1])
-                row[f"{name}_Fz_N"] = float(forces[i, 2])
-
-            self.log.append(row)
-
             # Convert forces to foot position corrections
             self._offsets = self._to_offsets(res.u0.foot_ground_force, contact[0], s0.yaw)
             # print(self._offsets)
         self.lc.apply_mpc_corrections(self._offsets)
         return res
-
-    def _update_posture(self, dt_s):
-        v_mm, w = self.lc.body_twist()
-        v = v_mm * MM
-        a = (v - self._v_prev) / max(dt_s, 1e-6)
-        self._v_prev = v
-        self.roll_des, self.pitch_des = self.posture.update(dt_s, v, w, a)
-        # if self.v_cmd_mps < 0:
-        #     self.pitch_des = np.deg2rad(10)
-        self.lc.set_body_tilt(self.roll_des, self.pitch_des)
-
-    def export_log(self, filepath="python/movement/logs/mpc.csv"):
-        # print(self.log)
-        path = Path(filepath)
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-        if not self.log:
-            print("No samples recorded; CSV not written.")
-            return
-
-        fieldnames = list(self.log[0].keys())
-
-        with path.open("w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(self.log)
-
-        print(f"Recorded samples: {len(self.log)}")
-        print(f"CSV saved to: {path.resolve()}")
 
     # ------------------------------------------------------------------
     def _reference(self, s0: State) -> List[np.ndarray]:
@@ -232,8 +147,6 @@ class Core:
             p[2] = self.z_des
 
             x = np.zeros(NX)
-            x[0] = self.roll_des
-            x[1] = self.pitch_des
             x[2] = yaw_end
             x[3:6] = p
             x[8] = w                                        # yaw rate
@@ -255,7 +168,7 @@ class Core:
         """Foot minus CoM, world frame, metres, per step.
         Planted feet are fixed in the WORLD (so r shrinks/grows as the CoM advances);
         a foot that lands inside the horizon is planted at its nominal touchdown point."""
-        R0 = rotation_matrix_rpy(self.roll_des, self.pitch_des, s0.yaw)
+        R0 = rotation_matrix_yaw(s0.yaw)
         world = [s0.pos + R0 @ _v_m(p) for p in self.lc.foot_positions_body()]
         land_bf = [_v_m(p) for p in self.lc.landing_targets_body()]
         airborne = [not contact[0][i] for i in range(NUM_LEGS)]
@@ -263,7 +176,7 @@ class Core:
         out = []
         for k in range(self.mpc.N):
             com = s0.pos if k == 0 else x_ref[k - 1][3:6]   # CoM at the START of step k
-            R = rotation_matrix_rpy(x_ref[k][0], x_ref[k][1], x_ref[k][2])
+            R = rotation_matrix_yaw(x_ref[k][2])
             r = np.zeros((NUM_LEGS, 3))
             for i in range(NUM_LEGS):
                 if contact[k][i]:
@@ -293,14 +206,7 @@ class Core:
             fw.append(Vec3(float(f[0]), float(f[1]), float(f[2])))
         ramp = min(1.0, self._t_engaged / self.ramp_s) if self.ramp_s > 0 else 1.0
         corr_w = foot_forces_to_positions(fw, self.gain * ramp, self.max_corr)
-        # print(corr_w) # prints 0
-        # print(
-        #     f"leg={i} "
-        #     f"force={forces[i]} "
-        #     f"nominal_share={share:.2f} "
-        #     f"force_deviation={f} "
-        #     f"offset={corr_w[i]}"
-        # )
+
         return [world_vector_to_leg_frame(c, yaw) for c in corr_w]
 
     

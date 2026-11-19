@@ -10,15 +10,15 @@ measure : foot position relative to body (leg FK), body velocity from stance-foo
 Orientation + gyro play the role of the IMU and come from MuJoCo (see make_imu).
 Position + linear velocity come from the filter.
 """
-from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Callable, Optional, Sequence
+from dataclasses import dataclass
+from typing import Callable, Sequence
 
 import mujoco
 import numpy as np
 
 from movement.motion.mpc import State
+from movement.motion.imu import ImuData
 
 NL = 4
 NS = 6 + 3 * NL   # 18
@@ -28,11 +28,6 @@ NY = 7 * NL       # 28: 12 pos + 12 vel + 4 height
 # ----------------------------------------------------------------------
 # Data containers
 # ----------------------------------------------------------------------
-@dataclass
-class ImuData:
-    valid: bool = True
-    rpy_rad: np.ndarray = field(default_factory=lambda: np.zeros(3))      # ZYX roll, pitch, yaw
-    gyro_rad_s: np.ndarray = field(default_factory=lambda: np.zeros(3))   # BODY frame
 
 
 def rot_from_rpy(rpy: np.ndarray) -> np.ndarray:
@@ -259,31 +254,3 @@ class MujocoFootKinematics:
         origin = d.xipos[self.body_id] if self.origin == "com" else d.xpos[self.body_id]
         world = d.site_xpos if self.kind == "site" else d.geom_xpos
         return np.array([R.T @ (world[i] - origin) for i in self.foot_ids])
-
-def _rpy_zyx(R: np.ndarray) -> np.ndarray:
-    roll = np.arctan2(R[2, 1], R[2, 2])
-    pitch = -np.arcsin(np.clip(R[2, 0], -1.0, 1.0))
-    yaw = np.arctan2(R[1, 0], R[0, 0])
-    return np.array([roll, pitch, yaw])
-
-
-def make_imu(model: mujoco.MjModel, data: mujoco.MjData, body_id: int) -> ImuData:
-    """MuJoCo -> ImuData. The IMU is mounted aligned with the body frame."""
-    vadr = model.jnt_dofadr[model.body_jntadr[body_id]]
-
-    R_body = data.xmat[body_id].reshape(3, 3)          # body -> world
-    gyro_body = data.qvel[vadr + 3:vadr + 6].copy()    # free-joint angular vel is body-frame
-
-    return ImuData(valid=True, rpy_rad=_rpy_zyx(R_body), gyro_rad_s=gyro_body)
-
-
-# ----------------------------------------------------------------------
-# Example wiring (the estimator is owned by Core; see core.py / main.py)
-# ----------------------------------------------------------------------
-# core = Core(mpc_solver, controller, z_des_m=0.0, gravity_z_mps2=float(model.opt.gravity[2]))
-# core.reset(p0, v0, make_imu(model, data, body_id))      # once, at a known pose
-#
-# every control tick (dt = control period):
-#   imu = make_imu(model, data, body_id)                  # sim only; on hardware: your IMU driver
-#   s = core.estimate(dt, imu)                            # pos / linear_vel estimated; rpy + gyro from IMU
-#   core.step(dt, time_s)                                 # MPC uses core.state

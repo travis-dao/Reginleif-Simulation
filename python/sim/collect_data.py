@@ -38,7 +38,6 @@ Output .npz keys:
 Load:
     d = np.load("dataset.npz"); X, Y = d["obs"], d["actions"]
 """
-from __future__ import annotations
 
 import argparse
 import json
@@ -60,7 +59,7 @@ from movement.leg.leg_controller import LegController
 from movement.motion.mpc import MPC, MPCConfig
 from movement.motion.core import Core
 from movement.motion.state_estimator import make_imu
-from movement.motion.stabilizer import Stabilizer, Config
+from movement.motion.imu import Imu, Config
 from sim.build_sim_xml import build_sim_xml
 from input.smooth import smoothing
 
@@ -150,7 +149,7 @@ class Sim:
         )
         self.controller = LegController(model, data)
         self.controller.init()
-        self.stabilizer = Stabilizer(Config(K_p=0.0, K_i=0.0, K_d=0.0), model, data, "base")
+        self.imu = Imu(Config(K_p=0.0, K_i=0.0, K_d=0.0), model, data, "base")
         self.core = Core(MPC(cfg), self.controller, z_des_m=0.0, solve_period_s=MPC_DT,
                          gain_mm_per_n=MPC_GAIN, gravity_z_mps2=float(model.opt.gravity[2]), ramp_s=0.1)
 
@@ -351,7 +350,7 @@ def run(args) -> None:
                     print(f"MPC engaged at t={data.time:.2f}s, z_des={core.z_des:.3f} m")
 
                 res = core.step(dt, data.time) if mpc_active else None
-                pid_out = sim.stabilizer.update(dt_s=dt)
+                pid_out = sim.imu.update(dt_s=dt)
 
                 # ---- fall check ----
                 up_z = data.xmat[sim.body_id].reshape(3, 3)[2, 2]

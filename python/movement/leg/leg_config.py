@@ -1,13 +1,5 @@
-"""Python port of leg_config.h and the parts of types.h the leg code relies on.
-
-types.h was not provided, so Vec3 / Theta3 / ImuData are reasonable
-reconstructions based on how they are used. Adjust if yours differ.
-"""
-from __future__ import annotations
-
-import math
 from dataclasses import dataclass, field
-from typing import List, Sequence, Tuple
+from typing import Sequence, Tuple
 
 
 '''
@@ -57,14 +49,6 @@ class Theta3:
     coxa: float = 0.0
     femur: float = 0.0
     tibia: float = 0.0
-
-
-@dataclass
-class ImuCorrection:
-    valid: bool = False
-    rot_mat: List[List[float]] = field(
-        default_factory=lambda: [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-    )
 
 
 # --------------------------------------------------------------------------
@@ -137,17 +121,3 @@ class Offset:
     neutral_foot_pos_bf: Tuple[Vec3, ...] = tuple(
         b + n for b, n in zip(leg_base_pos_bf, neutral_foot_pos_lf)
     )
-
-def rot_rp(roll: float, pitch: float):
-    """Ry(pitch) @ Rx(roll) as a row-major 3x3 list (yaw is handled elsewhere)."""
-    cr, sr = math.cos(roll), math.sin(roll)
-    cp, sp = math.cos(pitch), math.sin(pitch)
-    return [
-        [cp,  sp * sr, sp * cr],
-        [0.0, cr,      -sr    ],
-        [-sp, cp * sr, cp * cr],
-    ]
-
-
-def transpose3(m):
-    return [[m[j][i] for j in range(3)] for i in range(3)]

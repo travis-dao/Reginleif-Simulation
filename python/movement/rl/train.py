@@ -16,7 +16,6 @@ Pipeline (matches the C++ policy):  normalize -> clip -> fc1 -> act -> fc2 -> ac
 Weights are exported row-major [out][in], i.e. PyTorch nn.Linear.weight flattened in C order.
 Targets are the normalized teacher actions in [-1, 1]:  q_target = q_default + ACTION_SCALE * action.
 """
-from __future__ import annotations
 
 import argparse
 import copy
