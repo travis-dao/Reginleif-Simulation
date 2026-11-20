@@ -5,13 +5,7 @@ import json
 with open('models/body/json/joint_ref_angles.json', 'r') as file:
     REF_ANGLES_DEG = json.load(file)
 
-def build_sim_xml(
-    src: str,
-    dst: str,
-    start_height: float,
-    kp: float,
-    force: float,
-):
+def build_sim_xml(src: str, dst: str, start_height: float, kp: float, force: float):
     tree = ET.parse(src)
     root = tree.getroot()
 
@@ -31,13 +25,7 @@ def build_sim_xml(
     ET.SubElement(base, "freejoint", name="root")
 
     # Rotate the robot +90 degrees about Z.
-    rot = ET.SubElement(
-        base,
-        "body",
-        name="base_rot",
-        pos=f"0 0 0",
-        quat="0.707107 0 0 0.707107",
-    )
+    rot = ET.SubElement(base, "body", name="base_rot", pos=f"0 0 0", quat="0.707107 0 0 0.707107")
 
     for child in list(wb):
         wb.remove(child)
@@ -65,10 +53,7 @@ def build_sim_xml(
 
     missing_joints = set(REF_ANGLES_DEG) - found_joints
     if missing_joints:
-        raise ValueError(
-            f"Could not find configured joints in {src}: "
-            f"{sorted(missing_joints)}"
-        )
+        raise ValueError(f"Could not find configured joints in {src}: {sorted(missing_joints)}")
 
     # Collisions: disable all mesh geoms except ankles.
     for g in base.iter("geom"):

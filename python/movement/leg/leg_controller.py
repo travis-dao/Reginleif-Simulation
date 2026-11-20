@@ -1,8 +1,5 @@
-"""Python port of leg_controller.h / leg_controller.cpp."""
-
 import sys
 from pathlib import Path
-import argparse
 
 # Add the python/ directory to the module search path.
 PYTHON_DIR = Path(__file__).resolve().parents[1]
@@ -167,34 +164,35 @@ class LegController:
             return 0.0
         return self.legs[self.swing_leg].swing_time_remaining_s()
 
-    def update(self, dt_s: float, state: State):
-        self._update_twist(dt_s)
-        self._state = state
+    def update(self, dt_s: float, state: State | None):
+        if state is not None:
+            self._update_twist(dt_s)
+            self._state = state
 
-        yaw = state.yaw
-        v_cmd, _ = self._cmd
-        self._v_cmd_xy = Vec3(v_cmd * math.cos(yaw), v_cmd * math.sin(yaw), 0.0)
+            yaw = state.yaw
+            v_cmd, _ = self._cmd
+            self._v_cmd_xy = Vec3(v_cmd * math.cos(yaw), v_cmd * math.sin(yaw), 0.0)
 
-        grounded = all(leg.is_grounded() for leg in self.legs)
-        self._grounded_s = self._grounded_s + dt_s if grounded else 0.0
+            grounded = all(leg.is_grounded() for leg in self.legs)
+            self._grounded_s = self._grounded_s + dt_s if grounded else 0.0
 
-        if grounded and not self.grounded:               # a swing just finished
-            self.swing_leg = -1
-            new_order = self._select_order()
-            if new_order is not self._gait:
-                self._gait = new_order
-                if self._last_swing_leg >= 0:
-                    # keep the time to the next swing, but re-sequence from the most overdue leg
-                    remaining = min((1.0 - p) for p in self._psi) * self.period_s
-                    self._schedule_from(self._most_overdue_leg(), remaining)
-        self.grounded = grounded
+            if grounded and not self.grounded:               # a swing just finished
+                self.swing_leg = -1
+                new_order = self._select_order()
+                if new_order is not self._gait:
+                    self._gait = new_order
+                    if self._last_swing_leg >= 0:
+                        # keep the time to the next swing, but re-sequence from the most overdue leg
+                        remaining = min((1.0 - p) for p in self._psi) * self.period_s
+                        self._schedule_from(self._most_overdue_leg(), remaining)
+            self.grounded = grounded
 
-        if self.move_state is MoveState.WALKING:
-            self._advance_clock(dt_s)
-        elif self.move_state is MoveState.STOPPING:
-            # clock frozen: no new swings, finish the one in flight, then idle after a gap
-            if self.grounded and self._grounded_s >= Movement.GAP_DURATION_S:
-                self._set_state(MoveState.IDLE)
+            if self.move_state is MoveState.WALKING:
+                self._advance_clock(dt_s)
+            elif self.move_state is MoveState.STOPPING:
+                # clock frozen: no new swings, finish the one in flight, then idle after a gap
+                if self.grounded and self._grounded_s >= Movement.GAP_DURATION_S:
+                    self._set_state(MoveState.IDLE)
 
         for i in range(4):
             self.target_angles[i] = self.legs[i].update(dt_s)

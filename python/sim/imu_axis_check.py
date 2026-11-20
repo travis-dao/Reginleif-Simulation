@@ -8,7 +8,7 @@ import mujoco
 import mujoco.viewer
 
 from movement.motion.state_estimator import make_imu
-from sim.build_sim_xml import build_sim_xml
+from sim.util.build_sim_xml import build_sim_xml
 
 SRC = "models/body/xml/reginleif.xml"
 DST = "models/body/xml/reginleif_sim.xml"

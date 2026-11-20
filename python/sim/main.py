@@ -17,29 +17,15 @@ from movement.leg.leg_config import Movement
 from movement.motion.mpc import MPC, MPCConfig
 from movement.motion.core import Core
 from movement.motion.imu import Imu
-from sim.build_sim_xml import build_sim_xml
+from sim.util.build_sim_xml import build_sim_xml
+import sim.config as cfg
 from input.input import InputController
 from input.visualizer import InputVisualizer, StateVisualizer
 from input.smooth import smoothing
 
-SRC = "models/body/xml/reginleif.xml"
-DST = "models/body/xml/reginleif_sim.xml"
+build_sim_xml(cfg.SRC, cfg.DST, cfg.START_HEIGHT, cfg.KP, cfg.FORCE)
 
-KP = 30.0
-FORCE = 9.4
-START_HEIGHT = 0.5
-
-HORIZON = 10
-MPC_DT = 0.03
-SETTLE_TIME_S = 0.0       # let the robot drop and stand on the kinematic gait before MPC engages
-MPC_GAIN = 1.3            # mm of foot offset per N. Set 0.0 to run the pure gait (isolates MPC from gait problems)
-SETTLE_VEL = 0.1          # ...and require the base to be (nearly) at rest
-
-REST_S = 2.0              # stand still
-
-build_sim_xml(SRC, DST, START_HEIGHT, KP, FORCE)
-
-model = mujoco.MjModel.from_xml_path(DST)
+model = mujoco.MjModel.from_xml_path(cfg.DST)
 data = mujoco.MjData(model)
 mujoco.mj_forward(model, data)
 
@@ -61,8 +47,8 @@ def subtree_inertia(model, data, root: int) -> np.ndarray:
 
 
 cfg = MPCConfig(
-    horizon=HORIZON,
-    dt=MPC_DT,
+    horizon=cfg.HORIZON,
+    dt=cfg.MPC_DT,
     mass=float(model.body_subtreemass[body_id]),   # whole robot, not just the trunk
     I_body=subtree_inertia(model, data, body_id),  # base is level at t=0, so world axes == body axes
     R_weight=1e-3,                                 # larger = smoother forces, less chatter
@@ -79,8 +65,8 @@ controller = LegController(model, data)
 imu = Imu(model, data, "base")
 
 # z_des is latched from the measured standing height once the robot has settled
-core = Core(mpc_solver, controller, z_des_m=0.0, solve_period_s=MPC_DT,
-            gain_mm_per_n=MPC_GAIN, gravity_z_mps2=float(model.opt.gravity[2]), ramp_s=0.1)
+core = Core(mpc_solver, controller, z_des_m=0.0, solve_period_s=cfg.MPC_DT,
+            gain_mm_per_n=cfg.MPC_GAIN, gravity_z_mps2=float(model.opt.gravity[2]), ramp_s=0.1)
 
 # start the estimator at the known spawn pose (the estimate lives in this world frame from here on)
 _jnt = model.body_jntadr[body_id]
@@ -109,7 +95,7 @@ def sim():
             input = input_controller.get_input()
             V = input.y * controller.v_max_mm_s * 1e-3     # m/s
             R = smoothing(-input.x)                                  # path radius, m; 0.1 = turning in place
-            if REST_S <= data.time:
+            if cfg.REST_S <= data.time:
                 core.v_cmd_mps = V
                 if abs(input.y) < 1e-3 and abs(input.x) > 1e-3:
                     core.yaw_rate_cmd = controller.v_max_mm_s * 1e-3 / R
@@ -134,13 +120,14 @@ def sim():
 
             # Engage MPC once the robot has settled.
             if not mpc_active:
-                if (data.time > SETTLE_TIME_S and np.linalg.norm(s.linear_vel) < SETTLE_VEL):
+                if (data.time > cfg.SETTLE_TIME_S and np.linalg.norm(s.linear_vel) < cfg.SETTLE_VEL):
                     core.z_des = float(s.pos[2])
                     core.yaw_des = s.yaw
                     mpc_active = True
                     core._t_engaged = 0.0
 
                     print(f"MPC engaged at t={data.time:.2f}s, z_des={core.z_des:.3f} m")
+                    print(f"Base height: {data.xpos[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "base_rot")][2]:.3f} m")
 
             if mpc_active:
                 core.step(dt)

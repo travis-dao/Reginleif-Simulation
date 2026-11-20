@@ -15,8 +15,11 @@ class InputController:
         self.controls = KeyboardInput()
         self.input_ = Input()
 
-    def update(self, dt_s):
+    def update(self, dt_s, target: Input = None):
         target_x, target_y = self.controls.get_axes()
+
+        if target is not None:
+            target_x, target_y = target
 
         dx = target_x - self.input_.x
         dy = target_y - self.input_.y

@@ -1,37 +1,59 @@
-import math
-import numpy as np
-import matplotlib.pyplot as plt
+
+# Run with:
+# python python/movement/viz/graph_input.py
 
 import sys
 from pathlib import Path
-import argparse
 
 # Add the python/ directory to the module search path.
 PYTHON_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PYTHON_DIR))
 
-from input.smooth import smoothing
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
 
+CSV_PATH = Path("python/sim/log/input_command_mapping.csv")
 
-# Plot each piece separately to preserve discontinuities.
-x1 = np.linspace(0.001001, 0.5, 1000, endpoint=False)
-x2 = np.linspace(0.5, 0.8, 1000, endpoint=False)
-x3 = np.linspace(0.8, 1.0, 1000, endpoint=False)
-x4 = np.array([1.0])
+df = pd.read_csv(CSV_PATH)
 
-pieces = [x1, x2, x3, x4]
+df = df[np.hypot(df["input_x"], df["input_y"]) >= 0.99]
 
-for x in pieces:
-    y = [smoothing(float(xi)) for xi in x]
-    plt.plot(x, y, linewidth=2)
+# Joystick inputs define the X and Y axes.
+x = df["input_x"]
+y = df["input_y"]
 
-plt.axhline(0, color="black", linewidth=0.8)
-plt.axvline(0, color="black", linewidth=0.8)
+# Each output variable is plotted on the Z axis.
+outputs = [
+    ("V", "Joystick Inputs -> V"),
+    ("R", "Joystick Inputs -> R"),
+    ("v_cmd", "Joystick Inputs -> v_cmd"),
+    ("yaw_rate_cmd", "Joystick Inputs -> yaw_rate_cmd"),
+]
 
-plt.xlim(0, 1)
-plt.xlabel("x")
-plt.ylabel("smoothing(x)")
-plt.title("Smoothing Function")
-plt.grid(True, linestyle="--", alpha=0.5)
-plt.tight_layout()
+fig = plt.figure(figsize=(14, 10))
+
+for i, (z_col, title) in enumerate(outputs, start=1):
+    ax = fig.add_subplot(2, 2, i, projection="3d")
+
+    scatter = ax.scatter(
+        x,
+        y,
+        df[z_col],
+        c=df[z_col],
+        cmap="viridis",
+        s=20,
+        alpha=0.8,
+    )
+
+    ax.set_xlabel("Joystick Input X")
+    ax.set_ylabel("Joystick Input Y")
+    ax.set_zlabel(z_col)
+    ax.set_title(title)
+
+    fig.colorbar(scatter, ax=ax, shrink=0.65, pad=0.12)
+
+fig.suptitle("Joystick Input Mapping (3D)", fontsize=16)
+fig.tight_layout()
+
 plt.show()

@@ -24,34 +24,22 @@ class ImuData:
 
 
 class Imu:
-    def __init__(
-        self,
-        model: mujoco.MjModel,
-        data: mujoco.MjData,
-        body_name: str,
-        gyro_sensor: Optional[str] = None,
-    ):
+    def __init__(self, model: mujoco.MjModel, data: mujoco.MjData, body_name: str, gyro_sensor: Optional[str] = None,):
         self.model = model
         self.data = data
 
-        self.body_id = mujoco.mj_name2id(
-            model, mujoco.mjtObj.mjOBJ_BODY, body_name
-        )
+        self.body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, body_name)
         if self.body_id < 0:
             raise ValueError(f"Body '{body_name}' not found in model")
 
         self.gyro_adr = None
         if gyro_sensor is not None:
-            sid = mujoco.mj_name2id(
-                model, mujoco.mjtObj.mjOBJ_SENSOR, gyro_sensor
-            )
+            sid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SENSOR, gyro_sensor)
             if sid < 0:
                 raise ValueError(f"Sensor '{gyro_sensor}' not found in model")
 
             if model.sensor_dim[sid] != 3:
-                raise ValueError(
-                    f"Gyro sensor '{gyro_sensor}' must have dimension 3"
-                )
+                raise ValueError(f"Gyro sensor '{gyro_sensor}' must have dimension 3")
 
             self.gyro_adr = model.sensor_adr[sid]
 
@@ -98,24 +86,12 @@ class Imu:
         if self.gyro_adr is not None:
             # Assumes the gyro sensor axes align with the body axes.
             # MuJoCo gyro sensors report angular velocity in the sensor frame.
-            g_rad = np.asarray(
-                self.data.sensordata[
-                    self.gyro_adr:self.gyro_adr + 3
-                ],
-                dtype=float,
-            )
+            g_rad = np.asarray(self.data.sensordata[self.gyro_adr:self.gyro_adr + 3], dtype=float)
         else:
             # Request local-frame angular velocity.
             # MuJoCo spatial velocity layout: [angular, linear].
             vel = np.zeros(6)
-            mujoco.mj_objectVelocity(
-                self.model,
-                self.data,
-                mujoco.mjtObj.mjOBJ_BODY,
-                self.body_id,
-                vel,
-                1,
-            )
+            mujoco.mj_objectVelocity(self.model, self.data, mujoco.mjtObj.mjOBJ_BODY, self.body_id, vel, 1)
             g_rad = vel[:3]
 
         self.gyro_dps = g_rad * RAD_TO_DEG

@@ -12,7 +12,7 @@ import mujoco
 import mujoco.viewer
 
 from movement.leg.leg_controller import LegController
-from sim.build_sim_xml import build_sim_xml
+from sim.util.build_sim_xml import build_sim_xml
 
 SRC = "assembly/xml/reginleif.xml"
 DST = "assembly/xml/reginleif_sim.xml"
