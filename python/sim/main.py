@@ -17,7 +17,7 @@ from movement.leg.leg_config import Movement
 from movement.motion.mpc import MPC, MPCConfig
 from movement.motion.core import Core
 from movement.motion.imu import Imu
-from sim.util.build_sim_xml import build_sim_xml
+from sim.util.build_sim_xml import build_sim_xml, subtree_inertia
 import sim.config as cfg
 from sim.util.input_map import map_input_to_command
 from input.input import InputController
@@ -30,21 +30,6 @@ data = mujoco.MjData(model)
 mujoco.mj_forward(model, data)
 
 body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "base")
-
-
-def subtree_inertia(model, data, root: int) -> np.ndarray:
-    """Inertia (3x3, world axes) of the whole robot about its CoM."""
-    com = data.subtree_com[root]
-    I = np.zeros((3, 3))
-    for b in range(model.nbody):
-        if model.body_rootid[b] != model.body_rootid[root] or b == 0:
-            continue
-        R = data.ximat[b].reshape(3, 3)
-        Ib = R @ np.diag(model.body_inertia[b]) @ R.T
-        d = data.xipos[b] - com
-        I += Ib + model.body_mass[b] * (d @ d * np.eye(3) - np.outer(d, d))
-    return I
-
 
 mpc_cfg = MPCConfig(
     horizon=cfg.HORIZON,

@@ -1,5 +1,5 @@
 # GRU behavior cloning (stage 1) on the scenario .npz files from gen_test_data.py.
-#   python python/rl/bc_train.py
+#   python python/movement/rl/bc_train.py
 # Trains RecurrentActor only; saves a full ActorCritic state_dict (bc_policy.pt).
 import sys
 from pathlib import Path
@@ -21,6 +21,8 @@ PUSH_WINDOW_S = 1.5
 PUSH_FOCUS = 0.5                      # fraction of training windows forced to contain a push response
 INIT_LOG_STD = -1.5                   # exploration std handed to PPO later (BC never trains it)
 VAL_EVERY = 500
+COLD_START_FRAC = 0.25                # fraction of training windows that begin at t=0 of an episode (zero hidden, gait onset)
+ONSET_STEPS = 100                     # first 2 s: standing -> gait onset; reported separately in validation
 
 
 def load_dataset(data_dir):
@@ -43,7 +45,8 @@ def load_dataset(data_dir):
             q_default, action_scale = qd, sc
         assert np.allclose(qd, q_default) and sc == action_scale, f"{p.name}: q_default/action_scale differ from other files"
         eps.append(dict(name=p.stem, obs=torch.from_numpy(d["obs"][:n]), act=torch.from_numpy(d["act"][:n]),
-                        w=torch.from_numpy(w), push_idx=idx, post=post, accel=float(d["push_accel"])))
+                        w=torch.from_numpy(w), push_idx=idx, post=post, accel=float(d["push_accel"]),
+                        command=str(d["command_name"]), fell=bool(d["fell"])))
     print(f"loaded {len(eps)} episodes from {data_dir} ({skipped} skipped as too short)")
     return eps, q_default, action_scale
 
@@ -73,7 +76,9 @@ def sample_batch(eps, device):
         e = eps[np.random.choice(len(eps), p=prob)]
         n = len(e["obs"])
         s = np.random.randint(0, n - T + 1)
-        if e["push_idx"] >= 0 and np.random.rand() < PUSH_FOCUS:
+        if np.random.rand() < COLD_START_FRAC:
+            s = 0                                                      # train on exactly what validation/deployment starts with
+        elif e["push_idx"] >= 0 and np.random.rand() < PUSH_FOCUS:
             lo = max(0, e["push_idx"] + e["post"] - T + 1)             # window must contain the whole push response...
             hi = min(n - T, e["push_idx"] - BURN_IN)                   # ...after the burn-in
             if lo <= hi:
@@ -91,26 +96,44 @@ def sample_batch(eps, device):
 
 @torch.no_grad()
 def validate(model, val, device):
-    """Full held-out episodes from t=0 (hidden state starts at zero, exactly like deployment)."""
+    """Full held-out episodes from t=0 (hidden state starts at zero, exactly like deployment).
+    Returns overall MSE plus MSE split into: before the push / the 1.5 s after it / the rest of the episode."""
     B, L = len(val), max(len(e["obs"]) for e in val)
     obs = torch.zeros(B, L, ModelConfig.OBS_DIM)
     act = torch.zeros(B, L, ModelConfig.ACT_DIM)
     valid = torch.zeros(B, L)
-    post = torch.zeros(B, L)
     for i, e in enumerate(val):
         n = len(e["obs"])
         obs[i, :n], act[i, :n], valid[i, :n] = e["obs"], e["act"], 1.0
-        if e["push_idx"] >= 0:
-            post[i, e["push_idx"]:min(n, e["push_idx"] + e["post"])] = 1.0
     starts = torch.zeros(B, L, dtype=torch.bool)
     starts[:, 0] = True
     model.eval()
     mean, _, _ = model.actor(obs.to(device), None, starts.to(device))
     model.train()
-    err = (torch.tanh(mean).cpu() - act).pow(2).mean(-1)
-    overall = (err * valid).sum() / valid.sum()
-    post_mse = (err * post).sum() / post.sum().clamp_min(1.0)
-    return overall.item(), post_mse.item()
+    err = (torch.tanh(mean).cpu() - act).pow(2).mean(-1)                      # [B, L]
+
+    t = torch.arange(L).view(1, L)
+    p0 = torch.tensor([e["push_idx"] if e["push_idx"] >= 0 else L for e in val]).view(B, 1)
+    p1 = p0 + torch.tensor([e["post"] for e in val]).view(B, 1)
+    m = lambda mask: ((err * mask).sum() / mask.sum().clamp_min(1.0)).item()
+    pre = valid * (t < p0)
+    out = dict(overall=m(valid), onset=m(pre * (t < ONSET_STEPS)), pre=m(pre * (t >= ONSET_STEPS)),
+               post=m(valid * ((t >= p0) & (t < p1))), late=m(valid * (t >= p1)))
+    out["score"] = (out["onset"] + out["pre"] + out["post"] + out["late"]) / 4      # equal weight per segment
+
+    ep_err = (err * valid).sum(1) / valid.sum(1)                              # per-episode MSE
+    def group(key):
+        keys = sorted({str(key(e)) for e in val})
+        return {k: (ep_err[[i for i, e in enumerate(val) if str(key(e)) == k]].mean().item(),
+                    sum(str(key(e)) == k for e in val)) for k in keys}
+    out["by_command"], out["by_fell"] = group(lambda e: e["command"]), group(lambda e: "teacher_fell" if e["fell"] else "teacher_ok")
+    return out
+
+
+def save(model, path):
+    sd = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+    sd["actor.log_std"].fill_(INIT_LOG_STD)
+    torch.save(sd, path)
 
 
 def main():
@@ -125,6 +148,7 @@ def main():
     opt = torch.optim.Adam(model.actor.parameters(), lr=LR)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, STEPS)
 
+    best = float('inf')
     for step in range(STEPS):
         obs, act, weight, starts = sample_batch(train_eps, device)
         mean, _, _ = model.actor(obs, None, starts)
@@ -136,13 +160,19 @@ def main():
         opt.step(); sched.step()
 
         if step % VAL_EVERY == 0 or step == STEPS - 1:
-            v_all, v_post = validate(model, val_eps, device)
-            print(f"step {step}: train {loss.item():.6f}  val {v_all:.6f}  val post-push {v_post:.6f}")
+            v = validate(model, val_eps, device)
+            print(f"step {step}: train {loss.item():.6f}  val {v['overall']:.6f}  "
+                  f"[onset {v['onset']:.6f}  pre-push {v['pre']:.6f}  post-push {v['post']:.6f}  late {v['late']:.6f}]  score {v['score']:.6f}")
+            if v["score"] < best:
+                best = v["score"]
+                save(model, "python/rl/policy/bc_policy_best.pt")
 
-    with torch.no_grad():
-        model.actor.log_std.fill_(INIT_LOG_STD)
-    torch.save(model.state_dict(), "python/rl/data/bc_policy.pt")
-    print("saved bc_policy.pt")
+    v = validate(model, val_eps, device)
+    print("\nfinal val MSE per episode, by command:  ", {k: f"{e:.6f} (n={n})" for k, (e, n) in v["by_command"].items()})
+    print("final val MSE per episode, by teacher outcome:", {k: f"{e:.6f} (n={n})" for k, (e, n) in v["by_fell"].items()})
+    print(f"best segment-averaged val score {best:.6f} -> bc_policy_best.pt")
+    save(model, "python/rl/policy/bc_policy.pt")
+    print("saved bc_policy.pt (final)")
 
 
 if __name__ == "__main__":
