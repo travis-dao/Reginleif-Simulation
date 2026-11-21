@@ -1,12 +1,12 @@
-# python python/movement/rl/bc_eval.py
+# python python/rl/bc_eval.py
 
 # Closed-loop eval of the BC student under pushes. Offline action-MSE is NOT the success metric; this is.
 import numpy as np
 import torch
 
-from models.actor_critic import ActorCritic
+from python.rl.models.actor_critic import ActorCritic
 import sim.config as cfg
-from environments.env import Env
+from python.rl.environments.env import Env
 
 PUSH_ACCELS = [0.0, 1.0, 2.0, 3.0, 4.0]    # m/s^2 on the base for 0.1 s (same as collector)
 EPISODES, SECONDS, PUSH_T = 20, 12.0, 6.0
@@ -46,9 +46,9 @@ def rollout(env, model, device, accel, vx):
     return fell, pre, post
 
 
-def main(ckpt="python/movement/rl/policy/bc_policy.pt", q_default=None):
+def main(ckpt="python/rl/policy/bc_policy.pt", q_default=None):
     device = torch.device("cpu")
-    q_default = np.load("python/movement/rl/data/q_default.npy").astype(np.float32)
+    q_default = np.load("python/rl/data/q_default.npy").astype(np.float32)
     env = Env(q_default=q_default, action_scale_rad=1.0, foot_body_names=cfg.FOOT_BODIES, ground_geom_name=cfg.GROUND_GEOM)
     model = ActorCritic(q_default=q_default, action_scale=1.0)
     model.load_state_dict(torch.load(ckpt, map_location=device)); model.eval()

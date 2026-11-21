@@ -1,5 +1,5 @@
 # GRU behavior cloning (stage 1) on the scenario .npz files from gen_test_data.py.
-#   python python/movement/rl/bc_train.py
+#   python python/rl/bc_train.py
 # Trains RecurrentActor only; saves a full ActorCritic state_dict (bc_policy.pt).
 import sys
 from pathlib import Path
@@ -7,11 +7,11 @@ from pathlib import Path
 import numpy as np
 import torch
 
-PYTHON_DIR = Path(__file__).resolve().parents[2]
+PYTHON_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PYTHON_DIR))
-from movement.rl.models.actor_critic import ActorCritic, ModelConfig
+from rl.models.actor_critic import ActorCritic, ModelConfig
 
-DATA_DIR = "python/movement/rl/data/test"
+DATA_DIR = "python/rl/data/mpc"
 VAL_ACCELS = (3.0,)                   # hold out every pushed scenario with these push strengths (unseen-strength test)
 T, BURN_IN, BATCH = 256, 32, 32       # gait period = 90 steps, so windows span ~3 periods
 STEPS, LR = 4000, 1e-3
@@ -141,7 +141,7 @@ def main():
 
     with torch.no_grad():
         model.actor.log_std.fill_(INIT_LOG_STD)
-    torch.save(model.state_dict(), "python/movement/rl/data/bc_policy.pt")
+    torch.save(model.state_dict(), "python/rl/data/bc_policy.pt")
     print("saved bc_policy.pt")
 
 

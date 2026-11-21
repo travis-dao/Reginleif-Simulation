@@ -1,4 +1,4 @@
-# python python/movement/rl/test/test_gru.py
+# python python/rl/test/test_gru.py
 
 import sys
 from pathlib import Path
@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 import numpy as np
 
-PYTHON_DIR = Path(__file__).resolve().parents[2]
+PYTHON_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PYTHON_DIR))
 
 from rl.models.actor_critic import ActorCritic, ModelConfig

@@ -12,7 +12,7 @@ import numpy as np
 # Project paths
 # ---------------------------------------------------------
 
-PYTHON_DIR = Path(__file__).resolve().parents[3]
+PYTHON_DIR = Path(__file__).resolve().parents[2]
 PROJECT_ROOT = PYTHON_DIR.parent
 
 if str(PYTHON_DIR) not in sys.path:
@@ -21,7 +21,7 @@ if str(PYTHON_DIR) not in sys.path:
 from sim.util.build_sim_xml import build_sim_xml
 import sim.config as cfg
 from movement.motion.imu import Imu
-from movement.rl.models.actor_critic import ModelConfig
+from rl.models.actor_critic import ModelConfig
 
 
 GYRO_SCALE = 0.25

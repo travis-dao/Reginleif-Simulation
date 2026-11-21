@@ -1,4 +1,4 @@
-# python python/movement/rl/test/test_env_start.py
+# python python/rl/test/test_env_start.py
 
 import sys
 from pathlib import Path
@@ -6,15 +6,15 @@ from pathlib import Path
 import numpy as np
 
 # Add project root to Python path.
-PYTHON_DIR = Path(__file__).resolve().parents[3]
+PYTHON_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PYTHON_DIR))
 
-from movement.rl.environments.env import Env
+from rl.environments.env import Env
 import sim.config as cfg
-from movement.rl.models.actor_critic import ModelConfig
+from rl.models.actor_critic import ModelConfig
 
 def main():
-    q_default = np.load("python/movement/rl/data/q_default.npy").astype(np.float32)
+    q_default = np.load("python/rl/data/q_default.npy").astype(np.float32)
 
     env = Env(
         q_default=q_default,

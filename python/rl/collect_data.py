@@ -1,11 +1,11 @@
-# Headless MPC teacher rollouts -> BC dataset.   run: mjpython python/movement/rl/collect_data.py
+# Headless MPC teacher rollouts -> BC dataset.   run: mjpython python/rl/collect_data.py
 # Records exactly what the student will see (Env.get_observation layout) and what the teacher commanded.
 import sys
 from pathlib import Path
 import numpy as np
 import mujoco
 
-PYTHON_DIR = Path(__file__).resolve().parents[2]
+PYTHON_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PYTHON_DIR))
 
 from movement.leg.leg_controller import LegController
@@ -13,8 +13,8 @@ from movement.motion.mpc import MPC, MPCConfig
 from movement.motion.core import Core
 from movement.motion.imu import Imu
 from sim.util.build_sim_xml import build_sim_xml, subtree_inertia
-from movement.rl.models.actor_critic import ModelConfig
-from movement.rl.environments.env import (
+from rl.models.actor_critic import ModelConfig
+from rl.environments.env import (
     GYRO_SCALE, CMD_SCALE_LIN, CMD_SCALE_ANG, QD_SCALE, LEG_NAMES, JOINTS,
     SRC, DST, KP, FORCE, START_HEIGHT, FALL_UP_Z, FALL_HEIGHT)
 
@@ -195,12 +195,12 @@ def run_episode(q_default, action_scale, seconds, seed, push, verbose=False):
 
 def debug():
     """One episode, no pushes, prints state every 0.5 s.  python collect_data.py debug"""
-    q_default = np.load("python/movement/rl/data/run1.npz")["q_default"].astype(np.float32)
+    q_default = np.load("python/rl/data/run1.npz")["q_default"].astype(np.float32)
     run_episode(q_default, 1.0, 16.0, seed=0, push=False, verbose=True)
 
 
-def main(out="python/movement/rl/data/bc_run1.npz", n_episodes=200, seconds=25.0, push_fraction=0.5):
-    q_default = np.load("python/movement/rl/data/run1.npz")["q_default"].astype(np.float32)
+def main(out="python/rl/data/bc_run1.npz", n_episodes=200, seconds=25.0, push_fraction=0.5):
+    q_default = np.load("python/rl/data/run1.npz")["q_default"].astype(np.float32)
     action_scale = 1.0            # keep identical to Env(action_scale_rad=...)
     eps = []
     for i in range(n_episodes):

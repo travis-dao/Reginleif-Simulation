@@ -1,6 +1,6 @@
 # Generate a fixed, reproducible TEST set from the MPC sim: one .npz per scenario.
-#   mjpython python/movement/rl/gen_test_data.py            # full grid (~150 episodes)
-#   mjpython python/movement/rl/gen_test_data.py --quick    # small grid for smoke tests
+#   mjpython python/rl/gen_test_data.py            # full grid (~150 episodes)
+#   mjpython python/rl/gen_test_data.py --quick    # small grid for smoke tests
 #
 # Scenario = command x push accel x push direction (body frame) x push time (gait phase).
 # Besides what the student sees (obs/act), each file stores foot positions, base state and
@@ -14,15 +14,15 @@ from pathlib import Path
 import numpy as np
 import mujoco
 
-PYTHON_DIR = Path(__file__).resolve().parents[2]
+PYTHON_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PYTHON_DIR))
 
 from movement.leg.leg_controller import LegController
 from movement.motion.mpc import MPC, MPCConfig
 from movement.motion.core import Core
 from movement.motion.imu import Imu
-from movement.rl.models.actor_critic import ModelConfig
-from movement.rl.environments.env import GYRO_SCALE, CMD_SCALE_LIN, CMD_SCALE_ANG, QD_SCALE
+from rl.models.actor_critic import ModelConfig
+from rl.environments.env import GYRO_SCALE, CMD_SCALE_LIN, CMD_SCALE_ANG, QD_SCALE
 from sim.util.mujoco_robot_map import MuJuCoMap
 import sim.config as cfg
 from sim.util.build_sim_xml import build_sim_xml, subtree_inertia
@@ -154,7 +154,7 @@ def run_scenario(q_default, action_scale, cmd_name, input_x, input_y, accel, ang
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="python/movement/rl/data/test")
+    ap.add_argument("--out", default="python/rl/data/mpc")
     ap.add_argument("--seconds", type=float, default=12.0)
     ap.add_argument("--accels", type=float, nargs="+", default=[1.0, 2.0, 3.0, 4.0])
     ap.add_argument("--angles", type=float, nargs="+", default=[0, 90, 180, 270], help="deg, body frame; 0 = forward, 90 = left")
@@ -166,7 +166,7 @@ def main():
         args.accels, args.angles, args.offsets = [3.0], [0, 90, 180, 270], [0.0, 2 * GAIT_SLOT_S]
 
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
-    q_default = np.load("python/movement/rl/data/q_default.npy").astype(np.float32)
+    q_default = np.load("python/rl/data/q_default.npy").astype(np.float32)
     action_scale = 1.0                                           # must match collect_data.py / Env
 
     jobs = []

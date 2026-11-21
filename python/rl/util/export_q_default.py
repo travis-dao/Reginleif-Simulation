@@ -1,4 +1,4 @@
-# python python/movement/rl/util/export_q_default.py
+# python python/rl/util/export_q_default.py
 
 from pathlib import Path
 import sys
@@ -14,7 +14,7 @@ from sim.util.init_joint import init_joint
 from sim.util.mujoco_robot_map import MuJuCoMap
 
 XML_PATH = Path("models/body/xml/reginleif_sim.xml")
-OUTPUT_PATH = Path("python/movement/rl/data/q_default.npy")
+OUTPUT_PATH = Path("python/rl/data/q_default.npy")
 
 
 def main():

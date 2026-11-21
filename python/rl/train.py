@@ -1,10 +1,10 @@
 import torch
 import numpy as np
 
-from models.actor_critic import ActorCritic, ModelConfig
-from algorithms.ppo import PPO
-from environments.env import Env
-from storage.rollout_buffer import RolloutBuffer
+from rl.models.actor_critic import ActorCritic, ModelConfig
+from rl.algorithms.ppo import PPO
+from rl.environments.env import Env
+from rl.storage.rollout_buffer import RolloutBuffer
 
 def train():
     # 1. configs
@@ -13,7 +13,7 @@ def train():
 
     device = torch.device("mps" if torch.mps.is_available() else "cpu")
     # Load BC dataset for the reference pose and action scale.
-    dataset = np.load("movement/rl/data/run1.npz")
+    dataset = np.load("rl/data/run1.npz")
 
     q_default = dataset["q_default"]
 
