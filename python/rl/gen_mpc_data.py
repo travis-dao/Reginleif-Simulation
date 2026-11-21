@@ -51,7 +51,7 @@ def make_obs(R, data, imu, res, cmd3, q_default, prev_action):
     ]).astype(np.float32)
 
 
-def run_scenario(q_default, action_scale, cmd_name, input_x, input_y, accel, angle_deg, push_t, seconds):
+def run_scenario(q_default, action_scale, cmd_name, input_x, input_y, accel, angle_deg, push_t, seconds, args, seed):
     build_sim_xml(cfg.SRC, cfg.DST, cfg.START_HEIGHT, cfg.KP, cfg.FORCE)
     model = mujoco.MjModel.from_xml_path(cfg.DST)
     data = mujoco.MjData(model)
@@ -81,6 +81,9 @@ def run_scenario(q_default, action_scale, cmd_name, input_x, input_y, accel, ang
     push_start_idx, pushing = -1, False
     fell, fell_t = False, -1.0
     log = {k: [] for k in ("obs", "act", "contacts", "foot_pos_bf", "foot_cmd_bf", "landing_bf", "base_pos", "base_vel", "base_yaw", "time", "push_active")}
+    
+    rng = np.random.default_rng(seed)
+    ou = np.zeros(12)
 
     for k in range(int(seconds / dt)):
         imu.update(dt)
@@ -141,6 +144,11 @@ def run_scenario(q_default, action_scale, cmd_name, input_x, input_y, accel, ang
             log["push_active"].append(pushing)
             prev_action = act
 
+        if args.noise_sigma > 0 and on:
+            ou += (-ou / args.noise_tau) * dt + args.noise_sigma * np.sqrt(2 * dt / args.noise_tau) * rng.standard_normal(12)
+            c = data.ctrl[mujoco_map.aids] + ou
+            data.ctrl[mujoco_map.aids] = np.where(mujoco_map.limited, np.clip(c, mujoco_map.range[:, 0], mujoco_map.range[:, 1]), c)
+
         mujoco.mj_step(model, data)
 
     arrays = {k: np.asarray(v) for k, v in log.items()}
@@ -161,9 +169,17 @@ def main():
     ap.add_argument("--offsets", type=float, nargs="+", default=[0.0, 1 * GAIT_SLOT_S, 2 * GAIT_SLOT_S, 3 * GAIT_SLOT_S],
                     help="seconds added to push time, cycles which leg is mid-swing")
     ap.add_argument("--quick", action="store_true")
+    ap.add_argument("--seed", type=int, default=None,
+                help="Random seed (default: randomly generated)")
+    ap.add_argument("--noise_sigma", type=float, default=0.0)
+    ap.add_argument("--noise_tau", type=float, default=0.3)
     args = ap.parse_args()
     if args.quick:
         args.accels, args.angles, args.offsets = [3.0], [0, 90, 180, 270], [0.0, 2 * GAIT_SLOT_S]
+
+    if args.seed is None:
+        args.seed = int(np.random.SeedSequence().entropy) % (2**32)
+    print(f"Random seed: {args.seed}")
 
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     q_default = np.load("python/rl/data/q_default.npy").astype(np.float32)
@@ -179,7 +195,7 @@ def main():
     manifest = []
     for i, (name, input_x, input_y, acc, ang, pt) in enumerate(jobs):
         fname = f"{name}_a{acc:.1f}_ang{int(ang):03d}_t{pt:05.2f}.npz"
-        arrays, meta = run_scenario(q_default, action_scale, name, input_x, input_y, acc, ang, pt, args.seconds)
+        arrays, meta = run_scenario(q_default, action_scale, name, input_x, input_y, acc, ang, pt, args.seconds, args, args.seed + i)
         np.savez_compressed(out / fname, **arrays, **meta)
         print(f"[{i + 1}/{len(jobs)}] {fname}: {len(arrays['obs'])} steps, fell={meta['fell']}"
               + (" (gait started manually)" if meta["gait_started_manually"] else ""))

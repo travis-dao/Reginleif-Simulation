@@ -1,5 +1,5 @@
 # GRU behavior cloning (stage 1) on the scenario .npz files from gen_test_data.py.
-#   python python/movement/rl/bc_train.py
+#   python python/rl/bc_train.py
 # Trains RecurrentActor only; saves a full ActorCritic state_dict (bc_policy.pt).
 import sys
 from pathlib import Path
@@ -24,6 +24,7 @@ VAL_EVERY = 500
 COLD_START_FRAC = 0.25                # fraction of training windows that begin at t=0 of an episode (zero hidden, gait onset)
 ONSET_STEPS = 100                     # first 2 s: standing -> gait onset; reported separately in validation
 
+ZERO_PREV_ACT = True
 
 def load_dataset(data_dir):
     eps, skipped, q_default, action_scale = [], 0, None, None
@@ -90,7 +91,8 @@ def sample_batch(eps, device):
             mask[i, :BURN_IN] = 0.0          # hidden began at zero mid-episode -> don't train on warm-up
     # input noise: discourages copying prev_action (causal confusion) and adds robustness
     obs[..., :-12] += OBS_NOISE * torch.randn_like(obs[..., :-12])
-    obs[..., -12:] += PREV_ACT_NOISE * torch.randn_like(obs[..., -12:])
+    if not ZERO_PREV_ACT:
+        obs[..., -12:] += PREV_ACT_NOISE * torch.randn_like(obs[..., -12:])
     return obs.to(device), act.to(device), (mask * w).to(device), starts.to(device)
 
 
@@ -121,6 +123,15 @@ def validate(model, val, device):
                post=m(valid * ((t >= p0) & (t < p1))), late=m(valid * (t >= p1)))
     out["score"] = (out["onset"] + out["pre"] + out["post"] + out["late"]) / 4      # equal weight per segment
 
+    # Copy baseline: predict act[t] from the previous ground-truth action act[t-1].
+    # Exclude t=0 because the episode has no recorded previous action there.
+    copy_pred = torch.zeros_like(act)
+    copy_pred[:, 1:] = act[:, :-1]
+    copy_err = (copy_pred - act).pow(2).mean(-1)
+    copy_valid = valid.clone()
+    copy_valid[:, 0] = 0.0
+    out["copy_mse"] = ((copy_err * copy_valid).sum() / copy_valid.sum().clamp_min(1.0)).item()
+
     ep_err = (err * valid).sum(1) / valid.sum(1)                              # per-episode MSE
     def group(key):
         keys = sorted({str(key(e)) for e in val})
@@ -139,6 +150,8 @@ def save(model, path):
 def main():
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     eps, q_default, action_scale = load_dataset(DATA_DIR)
+    if ZERO_PREV_ACT:
+        for e in eps: e["obs"][:, -12:] = 0.0      # covers training AND validation
     train_eps, val_eps = split(eps)
 
     var = torch.cat([e["act"] for e in train_eps]).var(0).mean().item()
@@ -161,7 +174,9 @@ def main():
 
         if step % VAL_EVERY == 0 or step == STEPS - 1:
             v = validate(model, val_eps, device)
+            verdict = "COPY BASELINE MATCHES/BEATS MODEL" if v["copy_mse"] <= v["overall"] else "model beats copy baseline"
             print(f"step {step}: train {loss.item():.6f}  val {v['overall']:.6f}  "
+                  f"copy-baseline {v['copy_mse']:.6f} ({verdict})  "
                   f"[onset {v['onset']:.6f}  pre-push {v['pre']:.6f}  post-push {v['post']:.6f}  late {v['late']:.6f}]  score {v['score']:.6f}")
             if v["score"] < best:
                 best = v["score"]
@@ -170,6 +185,11 @@ def main():
     v = validate(model, val_eps, device)
     print("\nfinal val MSE per episode, by command:  ", {k: f"{e:.6f} (n={n})" for k, (e, n) in v["by_command"].items()})
     print("final val MSE per episode, by teacher outcome:", {k: f"{e:.6f} (n={n})" for k, (e, n) in v["by_fell"].items()})
+    print(f"final copy-baseline MSE (act[t] = act[t-1]): {v['copy_mse']:.6f}")
+    if v["copy_mse"] <= v["overall"]:
+        print("WARNING: copy baseline matches or beats model overall val MSE; the model may mostly be learning to copy.")
+    else:
+        print("Model beats the copy baseline on overall validation MSE.")
     print(f"best segment-averaged val score {best:.6f} -> bc_policy_best.pt")
     save(model, "python/rl/policy/bc_policy.pt")
     print("saved bc_policy.pt (final)")

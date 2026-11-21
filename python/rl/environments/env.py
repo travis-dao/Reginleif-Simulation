@@ -291,7 +291,7 @@ class Env:
                 ],
                 q - self.q_default,
                 qd * QD_SCALE,
-                self.prev_action,
+                np.zeros(ModelConfig.ACT_DIM, dtype=np.float32),
         ]).astype(np.float32)
 
         assert frame.shape == (ModelConfig.OBS_DIM,)
@@ -326,7 +326,7 @@ class Env:
                 contact = self.data.contact[j]
                 g1 = int(contact.geom1)
                 g2 = int(contact.geom2)
-                if g1 == (self.ground_geom_id and g2 in foot_geoms) or (g2 == self.ground_geom_id and g1 in foot_geoms):
+                if (g1 == self.ground_geom_id and g2 in foot_geoms) or (g2 == self.ground_geom_id and g1 in foot_geoms):
                     contacts[i] = 1.0
                     break
 
@@ -470,8 +470,8 @@ class Env:
 
         # Advance simulation.
         for _ in range(self.decimation):
-            mujoco.mj_step(self.model,self.data)
-            self.imu.update()
+            mujoco.mj_step(self.model, self.data)
+            self.imu.update(self.model.opt.timestep)
 
         self.step_count += 1
 
@@ -489,7 +489,7 @@ class Env:
         self.episode_reward += reward
 
         # Update previous action for next observation.
-        self.prev_action = action.copy()
+        # self.prev_action = action.copy()
 
         self.last_q_target = q_target.copy()
 
