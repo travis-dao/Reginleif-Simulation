@@ -1,6 +1,6 @@
 # Generate a fixed, reproducible TEST set from the MPC sim: one .npz per scenario.
-#   mjpython python/rl/gen_test_data.py            # full grid (~150 episodes)
-#   mjpython python/rl/gen_test_data.py --quick    # small grid for smoke tests
+#   mjpython python/rl/gen_mpc_data.py            # full grid (~150 episodes)
+#   mjpython python/rl/gen_mpc_data.py --quick    # small grid for smoke tests
 #
 # Scenario = command x push accel x push direction (body frame) x push time (gait phase).
 # Besides what the student sees (obs/act), each file stores foot positions, base state and
