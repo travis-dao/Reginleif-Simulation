@@ -21,12 +21,12 @@ from movement.leg.leg_controller import LegController
 from movement.motion.mpc import MPC, MPCConfig
 from movement.motion.core import Core
 from movement.motion.imu import Imu
-from sim.util.build_sim_xml import build_sim_xml, subtree_inertia
-from sim.util.input_map import map_input_to_command, generate_walk_commands
 from movement.rl.models.actor_critic import ModelConfig
 from movement.rl.environments.env import GYRO_SCALE, CMD_SCALE_LIN, CMD_SCALE_ANG, QD_SCALE
 from sim.util.mujoco_robot_map import MuJuCoMap
 import sim.config as cfg
+from sim.util.build_sim_xml import build_sim_xml, subtree_inertia
+from sim.util.input_map import map_input_to_command, generate_walk_commands
 
 POLICY_HZ = 50.0
 

@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from models.actor_critic import ActorCritic
+import sim.config as cfg
 from environments.env import Env
 
 PUSH_ACCELS = [0.0, 1.0, 2.0, 3.0, 4.0]    # m/s^2 on the base for 0.1 s (same as collector)
@@ -47,8 +48,8 @@ def rollout(env, model, device, accel, vx):
 
 def main(ckpt="python/movement/rl/policy/bc_policy.pt", q_default=None):
     device = torch.device("cpu")
-    q_default = np.load("python/movement/rl/data/run1.npz")["q_default"]
-    env = Env(q_default=q_default, action_scale_rad=1.0, foot_body_names=("l0t", "l1t", "l2t", "l3t"), ground_geom_name="floor")
+    q_default = np.load("python/movement/rl/data/q_default.npy").astype(np.float32)
+    env = Env(q_default=q_default, action_scale_rad=1.0, foot_body_names=cfg.FOOT_BODIES, ground_geom_name=cfg.GROUND_GEOM)
     model = ActorCritic(q_default=q_default, action_scale=1.0)
     model.load_state_dict(torch.load(ckpt, map_location=device)); model.eval()
 

@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 
 # Add project root to Python path.
-ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT))
+PYTHON_DIR = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(PYTHON_DIR))
 
 from movement.rl.environments.env import Env, START_HEIGHT, STAND_HEIGHT, FALL_HEIGHT
 from movement.rl.models.actor_critic import ModelConfig
