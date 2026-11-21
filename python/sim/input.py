@@ -16,6 +16,7 @@ from input.visualizer import InputVisualizer
 from input.smooth import smoothing
 from input.cycle import cycle
 import sim.config as cfg
+from sim.util.input_map import map_input_to_command, generate_walk_commands
 from movement.leg.leg_controller import LegController
 
 input_controller = InputController()
@@ -29,35 +30,6 @@ lc = LegController(model, data)
 
 log = []
 
-import math
-
-# name, input.x, input.y
-TURN_STEPS = 5
-MAX_ANGLE_RAD = math.radians(45.0)
-
-def generate_walk_commands():
-    commands = []
-
-    for direction, sign_y in (("forward", 1.0), ("backward", -1.0)):
-        for i in range(-TURN_STEPS, TURN_STEPS + 1):
-            angle = (i / TURN_STEPS) * MAX_ANGLE_RAD
-
-            input_x = math.sin(angle)
-            input_y = sign_y * math.cos(angle)
-
-            if i == 0:
-                name = f"walk_{direction}"
-            else:
-                side = "right" if input_x > 0 else "left"
-                name = f"walk_{direction}_{side}_{abs(math.degrees(angle)):.0f}deg"
-
-            commands.append((name, input_x, input_y))
-
-    return commands
-
-
-print(generate_walk_commands())
-
 try:
     while input_visualizer.running:
         step_start = time.time()
@@ -66,16 +38,8 @@ try:
         input_controller.update(dt, cycle(data.time))
         input = input_controller.get_input()
 
-        V = input.y * lc.v_max_mm_s * 1e-3     # m/s
-        R = smoothing(-input.x)                # path radius, m; 0.1 = turning in place
         if cfg.REST_S <= data.time:
-            v_cmd_mps = V
-            if abs(input.y) < 1e-3 and abs(input.x) > 1e-3:
-                yaw_rate_cmd = lc.v_max_mm_s * 1e-3 / R
-            elif abs(input.x) >= 1e-3:
-                yaw_rate_cmd = V / R
-            else:
-                yaw_rate_cmd = 0
+                v_cmd_mps, yaw_rate_cmd = map_input_to_command(input.x, input.y, V, R, lc.v_max_mm_s)
         else:
             v_cmd_mps = yaw_rate_cmd = 0.0
 
@@ -85,8 +49,6 @@ try:
             "time_s" : data.time,
             "input_x" : input.x,
             "input_y" : input.y,
-            "V": V,
-            "R": R,
             "v_cmd": v_cmd_mps,
             "yaw_rate_cmd": yaw_rate_cmd
         }

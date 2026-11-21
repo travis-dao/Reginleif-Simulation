@@ -10,23 +10,17 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
 from movement.rl.environments.env import Env
-
-# Replace these with the actual names in reginleif.xml.
-FOOT_BODIES = ("l0t", "l1t", "l2t", "l3t")
-GROUND_GEOM = "floor"
-
+import sim.config as cfg
+from movement.rl.models.actor_critic import ModelConfig
 
 def main():
-    # Load default pose from your BC dataset.
-    dataset = np.load(ROOT / "movement/rl/datasets/run1.npz")
-
-    q_default = dataset["q_default"]
+    q_default = np.load("python/movement/rl/data/q_default.npy").astype(np.float32)
 
     env = Env(
         q_default=q_default,
         action_scale_rad=1.0,
-        foot_body_names=FOOT_BODIES,
-        ground_geom_name=GROUND_GEOM,
+        foot_body_names=cfg.FOOT_BODIES,
+        ground_geom_name=cfg.GROUND_GEOM,
     )
 
     obs, privileged_obs = env.reset()
@@ -35,8 +29,8 @@ def main():
     print("Actor observation:", obs.shape)
     print("Critic observation:", privileged_obs.shape)
 
-    assert obs.shape == (45,)
-    assert privileged_obs.shape == (20,)
+    assert obs.shape == (ModelConfig.OBS_DIM,)
+    assert privileged_obs.shape == (ModelConfig.PRIV_DIM,)
 
     assert np.all(np.isfinite(obs))
     assert np.all(np.isfinite(privileged_obs))
@@ -51,8 +45,8 @@ def main():
 
         obs, privileged_obs, reward, terminated, truncated, info = env.step(action)
 
-        assert obs.shape == (45,)
-        assert privileged_obs.shape == (20,)
+        assert obs.shape == (ModelConfig.OBS_DIM,)
+        assert privileged_obs.shape == (ModelConfig.PRIV_DIM,)
 
         assert np.all(np.isfinite(obs))
         assert np.all(np.isfinite(privileged_obs))

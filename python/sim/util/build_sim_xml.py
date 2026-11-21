@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 import math
 import json
+import numpy as np
 
 with open('models/body/json/joint_ref_angles.json', 'r') as file:
     REF_ANGLES_DEG = json.load(file)
@@ -115,3 +116,15 @@ def build_sim_xml(src: str, dst: str, start_height: float, kp: float, force: flo
 
     ET.indent(tree, space="  ")
     tree.write(dst, encoding="utf-8", xml_declaration=True)
+
+
+def subtree_inertia(model, data, root):
+    com = data.subtree_com[root]
+    I = np.zeros((3, 3))
+    for b in range(model.nbody):
+        if model.body_rootid[b] != model.body_rootid[root] or b == 0:
+            continue
+        R = data.ximat[b].reshape(3, 3)
+        d = data.xipos[b] - com
+        I += R @ np.diag(model.body_inertia[b]) @ R.T + model.body_mass[b] * (d @ d * np.eye(3) - np.outer(d, d))
+    return I

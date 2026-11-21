@@ -16,9 +16,8 @@ from movement.rl.models.actor_critic import ModelConfig
 FOOT_BODIES = ("l0t", "l1t", "l2t", "l3t")
 GROUND_GEOM = "floor"
 
-dataset = np.load(ROOT / "movement/rl/datasets/run1.npz")
 
-q_default = dataset["q_default"]
+q_default = np.load("python/movement/rl/data/q_default.npy").astype(np.float32)
 
 env = Env(
     q_default=q_default,
@@ -34,17 +33,10 @@ print("Standing height target:", STAND_HEIGHT)
 print("Fall threshold:", FALL_HEIGHT)
 
 for i in range(100):
-    _, _, reward, terminated, truncated, info = env.step(
-        np.zeros(ModelConfig.ACT_DIM, dtype=np.float32)
-    )
+    _, _, reward, terminated, truncated, info = env.step(np.zeros(ModelConfig.ACT_DIM, dtype=np.float32))
 
     if i % 10 == 0:
-        print(
-            f"Step {i}: "
-            f"height={info['base_height']:.3f} m, "
-            f"reward={reward:.3f}, "
-            f"terminated={terminated}"
-        )
+        print(f"Step {i}: height={info['base_height']:.3f} m, reward={reward:.3f}, terminated={terminated}")
 
     if terminated or truncated:
         print("Episode ended at step", i)

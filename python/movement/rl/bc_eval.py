@@ -47,7 +47,7 @@ def rollout(env, model, device, accel, vx):
 
 def main(ckpt="python/movement/rl/policy/bc_policy.pt", q_default=None):
     device = torch.device("cpu")
-    q_default = np.load("python/movement/rl/datasets/run1.npz")["q_default"]
+    q_default = np.load("python/movement/rl/data/run1.npz")["q_default"]
     env = Env(q_default=q_default, action_scale_rad=1.0, foot_body_names=("l0t", "l1t", "l2t", "l3t"), ground_geom_name="floor")
     model = ActorCritic(q_default=q_default, action_scale=1.0)
     model.load_state_dict(torch.load(ckpt, map_location=device)); model.eval()

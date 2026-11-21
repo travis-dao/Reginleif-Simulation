@@ -19,9 +19,9 @@ from movement.motion.core import Core
 from movement.motion.imu import Imu
 from sim.util.build_sim_xml import build_sim_xml
 import sim.config as cfg
+from sim.util.input_map import map_input_to_command
 from input.input import InputController
 from input.visualizer import InputVisualizer, StateVisualizer
-from input.smooth import smoothing
 
 build_sim_xml(cfg.SRC, cfg.DST, cfg.START_HEIGHT, cfg.KP, cfg.FORCE)
 
@@ -46,7 +46,7 @@ def subtree_inertia(model, data, root: int) -> np.ndarray:
     return I
 
 
-cfg = MPCConfig(
+mpc_cfg = MPCConfig(
     horizon=cfg.HORIZON,
     dt=cfg.MPC_DT,
     mass=float(model.body_subtreemass[body_id]),   # whole robot, not just the trunk
@@ -60,12 +60,12 @@ cfg = MPCConfig(
                      1, 1, 20, 
                      0.0]),
 )
-mpc_solver = MPC(cfg)
-controller = LegController(model, data)
+mpc = MPC(mpc_cfg)
+lc = LegController(model, data)
 imu = Imu(model, data, "base")
 
 # z_des is latched from the measured standing height once the robot has settled
-core = Core(mpc_solver, controller, z_des_m=0.0, solve_period_s=cfg.MPC_DT,
+core = Core(mpc, lc, z_des_m=0.0, solve_period_s=cfg.MPC_DT,
             gain_mm_per_n=cfg.MPC_GAIN, gravity_z_mps2=float(model.opt.gravity[2]), ramp_s=0.1)
 
 # start the estimator at the known spawn pose (the estimate lives in this world frame from here on)
@@ -93,29 +93,21 @@ def sim():
             s = core.estimate(dt, imu.read())
 
             input = input_controller.get_input()
-            V = input.y * controller.v_max_mm_s * 1e-3     # m/s
-            R = smoothing(-input.x)                                  # path radius, m; 0.1 = turning in place
             if cfg.REST_S <= data.time:
-                core.v_cmd_mps = V
-                if abs(input.y) < 1e-3 and abs(input.x) > 1e-3:
-                    core.yaw_rate_cmd = controller.v_max_mm_s * 1e-3 / R
-                elif abs(input.x) >= 1e-3:
-                    core.yaw_rate_cmd = V / R
-                else:
-                    core.yaw_rate_cmd = 0
+                core.v_cmd_mps, core.yaw_rate_cmd = map_input_to_command(input.x, input.y, lc.v_max_mm_s)
             else:
                 core.v_cmd_mps = core.yaw_rate_cmd = 0.0
 
             
             state_visualizer.update(
-                swing_leg=Movement.index_name(controller.swing_leg),
-                gait=Movement.order_name(controller._gait),
+                swing_leg=Movement.index_name(lc.swing_leg),
+                gait=Movement.order_name(lc._gait),
                 vel_cmd=core.v_cmd_mps * 1e3,
-                vel_real=controller._v,
+                vel_real=lc._v,
                 vel_est=core.estimator.state.linear_vel[0] * 1e3,
                 yaw_cmd=core.yaw_rate_cmd,
-                yaw_real=controller._w,
-                leg_duty=controller.duty
+                yaw_real=lc._w,
+                leg_duty=lc.duty
             )
 
             # Engage MPC once the robot has settled.
@@ -132,7 +124,7 @@ def sim():
             if mpc_active:
                 core.step(dt)
 
-            controller.update(dt, core.estimator.state)
+            lc.update(dt, core.estimator.state)
 
             mujoco.mj_step(model, data)
             viewer.sync()

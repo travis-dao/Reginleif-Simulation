@@ -14,20 +14,30 @@ from pathlib import Path
 import numpy as np
 import mujoco
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))      # so `import collect_data` works
-from collect_data import (                                      # reuse setup + constants
-    LegController, MPC, MPCConfig, Core, Imu, build_sim_xml, ModelConfig, Resolver, subtree_inertia,
-    GYRO_SCALE, CMD_SCALE_LIN, CMD_SCALE_ANG, QD_SCALE, SRC, DST, KP, FORCE, START_HEIGHT, FALL_UP_Z,
-    HORIZON, MPC_DT, MPC_GAIN, REST_S, SETTLE_VEL, POLICY_HZ,
-)
+PYTHON_DIR = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PYTHON_DIR))
+
+from movement.leg.leg_controller import LegController
+from movement.motion.mpc import MPC, MPCConfig
+from movement.motion.core import Core
+from movement.motion.imu import Imu
+from sim.util.build_sim_xml import build_sim_xml, subtree_inertia
+from sim.util.input_map import map_input_to_command, generate_walk_commands
+from movement.rl.models.actor_critic import ModelConfig
+from movement.rl.environments.env import GYRO_SCALE, CMD_SCALE_LIN, CMD_SCALE_ANG, QD_SCALE
+from sim.util.mujoco_robot_map import MuJuCoMap
+import sim.config as cfg
+
+POLICY_HZ = 50.0
+
 
 PUSH_T = 6.0          # s, gait is well established by then
 PUSH_DUR = 0.1        # s
 GAIT_SLOT_S = 0.45    # a swing starts every 0.45 s (period 1.8 s / 4 legs); offsets below cycle which leg is mid-swing
 YAW_CMD = 0.30        # rad/s for the turn scenario (limit is ~0.4)
 
-# name, fraction of v_max (input.y), yaw rate
-COMMANDS = (("walk", 1.0, 0.0), ("turn", 0.0, YAW_CMD), ("stand", 0.0, 0.0))
+# name, input(x, y)
+COMMANDS = (*generate_walk_commands(), ("turn_right", 1.0, 0.0), ("turn_left", -1.0, 0.0), ("stand", 0.0, 0.0))
 
 
 def make_obs(R, data, imu, res, cmd3, q_default, prev_action):
@@ -41,25 +51,26 @@ def make_obs(R, data, imu, res, cmd3, q_default, prev_action):
     ]).astype(np.float32)
 
 
-def run_scenario(q_default, action_scale, cmd_name, v_frac, yaw_cmd, accel, angle_deg, push_t, seconds):
-    build_sim_xml(str(SRC), str(DST), START_HEIGHT, KP, FORCE)
-    model = mujoco.MjModel.from_xml_path(str(DST))
+def run_scenario(q_default, action_scale, cmd_name, input_x, input_y, accel, angle_deg, push_t, seconds):
+    build_sim_xml(cfg.SRC, cfg.DST, cfg.START_HEIGHT, cfg.KP, cfg.FORCE)
+    model = mujoco.MjModel.from_xml_path(cfg.DST)
     data = mujoco.MjData(model)
     mujoco.mj_forward(model, data)
     body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "base")
-    res = Resolver(model)
+    mujoco_map = MuJuCoMap(model)
     mass = float(model.body_subtreemass[body])
     dof = model.jnt_dofadr[model.body_jntadr[body]]
 
-    cfg = MPCConfig(horizon=HORIZON, dt=MPC_DT, mass=mass, I_body=subtree_inertia(model, data, body),
+    mpc_cfg = MPCConfig(horizon=cfg.HORIZON, dt=cfg.MPC_DT, mass=mass, I_body=subtree_inertia(model, data, body),
                     R_weight=1e-3, mu=0.4, Q_diag=np.array([30, 30, 10, 1, 1, 10, 1, 1, 1, 1, 1, 20, 0.0]))
-    mpc, ctrl, imu = MPC(cfg), LegController(model, data), Imu(model, data, "base")
-    core = Core(mpc, ctrl, z_des_m=0.0, solve_period_s=MPC_DT, gain_mm_per_n=MPC_GAIN,
+    mpc, lc, imu = MPC(mpc_cfg), LegController(model, data), Imu(model, data, "base")
+    core = Core(mpc, lc, z_des_m=0.0, solve_period_s=cfg.MPC_DT, gain_mm_per_n=cfg.MPC_GAIN,
                 gravity_z_mps2=float(model.opt.gravity[2]), ramp_s=0.1)
     qa = model.jnt_qposadr[model.body_jntadr[body]]
     core.reset(data.qpos[qa:qa + 3].copy(), np.zeros(3), imu.read())
 
-    v_cmd = v_frac * ctrl.v_max_mm_s * 1e-3
+
+    v_cmd, yaw_cmd = map_input_to_command(input_x, input_y, lc.v_max_mm_s)
     cmd3 = np.array([v_cmd, 0.0, yaw_cmd], np.float32)
     dt = model.opt.timestep
     decim = max(1, int(round(1.0 / (POLICY_HZ * dt))))
@@ -74,25 +85,25 @@ def run_scenario(q_default, action_scale, cmd_name, v_frac, yaw_cmd, accel, angl
     for k in range(int(seconds / dt)):
         imu.update(dt)
         s = core.estimate(dt, imu.read())
-        on = data.time >= REST_S
+        on = data.time >= cfg.REST_S
         core.v_cmd_mps, core.yaw_rate_cmd = (v_cmd, yaw_cmd) if on else (0.0, 0.0)
 
-        if not mpc_active and np.linalg.norm(s.linear_vel) < SETTLE_VEL:
+        if not mpc_active and np.linalg.norm(s.linear_vel) < cfg.SETTLE_VEL:
             core.z_des, core.yaw_des = float(s.pos[2]), s.yaw
             mpc_active, core._t_engaged = True, 0.0
         if mpc_active:
             core.step(dt)
-        if on and ctrl.is_idle() and (abs(v_cmd) > 1e-3 or abs(yaw_cmd) > 1e-3):
+        if on and lc.is_idle() and (abs(v_cmd) > 1e-3 or abs(yaw_cmd) > 1e-3):
             forced = True
-            ctrl.set_body_command(v_cmd * 1e3, yaw_cmd)
-            ctrl.request_start()
-        ctrl.update(dt, core.estimator.state)
+            lc.set_body_command(v_cmd * 1e3, yaw_cmd)
+            lc.request_start()
+        lc.update(dt, core.estimator.state)
 
         R = data.xmat[body].reshape(3, 3)
         z = data.xpos[body, 2]
         if on and z_stand is None:
             z_stand = z
-        if R[2, 2] < FALL_UP_Z or (z_stand is not None and z < 0.6 * z_stand):
+        if R[2, 2] < cfg.FALL_UP_Z or (z_stand is not None and z < 0.6 * z_stand):
             fell, fell_t = True, data.time
             break
 
@@ -111,18 +122,18 @@ def run_scenario(q_default, action_scale, cmd_name, v_frac, yaw_cmd, accel, angl
 
         # ---- record at policy rate (state the teacher saw, command the teacher issued) ----
         if on and k % decim == 0:
-            q_t = data.ctrl[res.aids].copy()
-            if res.limited.any():
-                q_t = np.where(res.limited, np.clip(q_t, res.range[:, 0], res.range[:, 1]), q_t)
+            q_t = data.ctrl[mujoco_map.aids].copy()
+            if mujoco_map.limited.any():
+                q_t = np.where(mujoco_map.limited, np.clip(q_t, mujoco_map.range[:, 0], mujoco_map.range[:, 1]), q_t)
             act = np.clip((q_t - q_default) / action_scale, -1.0, 1.0).astype(np.float32)
-            obs = make_obs(R, data, imu, res, cmd3, q_default, prev_action)
+            obs = make_obs(R, data, imu, mujoco_map, cmd3, q_default, prev_action)
             assert obs.shape == (ModelConfig.OBS_DIM,)
-            foot_w = np.array([data.xpos[b] for b in res.foot_bodies])
+            foot_w = np.array([data.xpos[b] for b in mujoco_map.foot_bodies])
             log["obs"].append(obs); log["act"].append(act)
-            log["contacts"].append(res.contacts(model, data))
+            log["contacts"].append(mujoco_map.contacts(model, data))
             log["foot_pos_bf"].append((foot_w - data.xpos[body]) @ R)               # R.T @ p, row-vector form; metres
-            log["foot_cmd_bf"].append([[v.x, v.y, v.z] for v in ctrl.foot_positions_body()])     # mm, controller target
-            log["landing_bf"].append([[v.x, v.y, v.z] for v in ctrl.landing_targets_body()])     # mm
+            log["foot_cmd_bf"].append([[v.x, v.y, v.z] for v in lc.foot_positions_body()])     # mm, controller target
+            log["landing_bf"].append([[v.x, v.y, v.z] for v in lc.landing_targets_body()])     # mm
             log["base_pos"].append(data.xpos[body].copy())
             log["base_vel"].append(data.qvel[dof:dof + 3].copy())
             log["base_yaw"].append(np.arctan2(R[1, 0], R[0, 0]))
@@ -143,7 +154,7 @@ def run_scenario(q_default, action_scale, cmd_name, v_frac, yaw_cmd, accel, angl
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="python/movement/rl/datasets/test")
+    ap.add_argument("--out", default="python/movement/rl/data/test")
     ap.add_argument("--seconds", type=float, default=12.0)
     ap.add_argument("--accels", type=float, nargs="+", default=[1.0, 2.0, 3.0, 4.0])
     ap.add_argument("--angles", type=float, nargs="+", default=[0, 90, 180, 270], help="deg, body frame; 0 = forward, 90 = left")
@@ -155,20 +166,20 @@ def main():
         args.accels, args.angles, args.offsets = [3.0], [0, 90, 180, 270], [0.0, 2 * GAIT_SLOT_S]
 
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
-    q_default = np.load("movement/rl/datasets/run1.npz")["q_default"].astype(np.float32)
+    q_default = np.load("python/movement/rl/data/q_default.npy").astype(np.float32)
     action_scale = 1.0                                           # must match collect_data.py / Env
 
     jobs = []
-    for name, vf, yaw in COMMANDS:
-        jobs.append((name, vf, yaw, 0.0, 0.0, PUSH_T))                           # unpushed baseline
+    for name, input_x, input_y in COMMANDS:
+        jobs.append((name, input_x, input_y, 0.0, 0.0, PUSH_T))                           # unpushed baseline
         offsets = args.offsets if name != "stand" else args.offsets[:1]          # gait phase is irrelevant when standing
         for acc, ang, off in itertools.product(args.accels, args.angles, offsets):
-            jobs.append((name, vf, yaw, acc, ang, PUSH_T + off))
+            jobs.append((name, input_x, input_y, acc, ang, PUSH_T + off))
 
     manifest = []
-    for i, (name, vf, yaw, acc, ang, pt) in enumerate(jobs):
+    for i, (name, input_x, input_y, acc, ang, pt) in enumerate(jobs):
         fname = f"{name}_a{acc:.1f}_ang{int(ang):03d}_t{pt:05.2f}.npz"
-        arrays, meta = run_scenario(q_default, action_scale, name, vf, yaw, acc, ang, pt, args.seconds)
+        arrays, meta = run_scenario(q_default, action_scale, name, input_x, input_y, acc, ang, pt, args.seconds)
         np.savez_compressed(out / fname, **arrays, **meta)
         print(f"[{i + 1}/{len(jobs)}] {fname}: {len(arrays['obs'])} steps, fell={meta['fell']}"
               + (" (gait started manually)" if meta["gait_started_manually"] else ""))

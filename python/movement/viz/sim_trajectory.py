@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 # Add the python/ directory to the module search path.
-PYTHON_DIR = Path(__file__).resolve().parents[1]
+PYTHON_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PYTHON_DIR))
 
 import time
@@ -12,18 +12,12 @@ import mujoco
 import mujoco.viewer
 
 from movement.leg.leg_controller import LegController
+import sim.config as cfg
 from sim.util.build_sim_xml import build_sim_xml
 
-SRC = "assembly/xml/reginleif.xml"
-DST = "assembly/xml/reginleif_sim.xml"
+build_sim_xml(cfg.SRC, cfg.DST, cfg.START_HEIGHT, cfg.KP, cfg.FORCE)
 
-KP = 30.0
-FORCE = 9.4
-START_HEIGHT = 0.2
-
-build_sim_xml(SRC, DST, START_HEIGHT, KP, FORCE)
-
-model = mujoco.MjModel.from_xml_path(DST)
+model = mujoco.MjModel.from_xml_path(cfg.DST)
 data = mujoco.MjData(model)
 
 # Disable gravity.

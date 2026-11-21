@@ -1,4 +1,3 @@
-
 # environments/env.py
 
 from __future__ import annotations
@@ -20,38 +19,15 @@ if str(PYTHON_DIR) not in sys.path:
     sys.path.insert(0, str(PYTHON_DIR))
 
 from sim.util.build_sim_xml import build_sim_xml
+import sim.config as cfg
 from movement.motion.imu import Imu
 from movement.rl.models.actor_critic import ModelConfig
 
-
-# ---------------------------------------------------------
-# Policy configuration (matches collect_data.py)
-# ---------------------------------------------------------
 
 GYRO_SCALE = 0.25
 CMD_SCALE_LIN = 2.0
 CMD_SCALE_ANG = 0.25
 QD_SCALE = 0.05
-
-LEG_NAMES = ("leg0", "leg1", "leg2", "leg3")
-JOINTS = ("coxa", "femur", "tibia")
-
-SRC = PROJECT_ROOT / "models/body/xml/reginleif.xml"
-DST = PROJECT_ROOT / "models/body/xml/reginleif_sim.xml"
-
-KP = 30.0
-FORCE = 9.4
-
-# Measured stable standing height.
-STAND_HEIGHT = 0.07
-
-# Spawn at the measured standing height to avoid an
-# artificial drop at the start of every episode.
-START_HEIGHT = STAND_HEIGHT
-
-# Terminate if the body tilts too far or falls too low.
-FALL_UP_Z = 0.5
-FALL_HEIGHT = 0.8 * STAND_HEIGHT  # 0.30 m
 
 
 class Env:
@@ -107,8 +83,8 @@ class Env:
         # Build MuJoCo model
         # -------------------------------------------------
 
-        build_sim_xml(str(SRC), str(DST), START_HEIGHT, KP, FORCE)
-        self.model = mujoco.MjModel.from_xml_path(str(DST))
+        build_sim_xml(cfg.SRC, cfg.DST, cfg.START_HEIGHT, cfg.KP, cfg.FORCE)
+        self.model = mujoco.MjModel.from_xml_path(cfg.DST)
         self.data = mujoco.MjData(self.model)
         mujoco.mj_forward(self.model, self.data)
 
@@ -139,8 +115,8 @@ class Env:
         self.joint_ids = []
         self.joint_names = []
 
-        for leg in LEG_NAMES:
-            for joint in JOINTS:
+        for leg in cfg.LEG_NAMES:
+            for joint in cfg.JOINTS:
 
                 actuator_name = f"{leg}_{joint}_act"
 
@@ -408,7 +384,7 @@ class Env:
         # Base height.
         height = self.data.xpos[self.body_id, 2]
 
-        height_reward = np.exp(-10.0 * (height - STAND_HEIGHT)**2)
+        height_reward = np.exp(-10.0 * (height - cfg.STAND_HEIGHT)**2)
 
         # Penalize action changes.
         action_rate_penalty = np.mean((action - self.prev_action)**2)
@@ -438,7 +414,7 @@ class Env:
 
         height = self.data.xpos[self.body_id, 2]
 
-        return (up_z < FALL_UP_Z or height < FALL_HEIGHT)
+        return (up_z < cfg.FALL_UP_Z or height < cfg.FALL_HEIGHT)
 
     # =====================================================
     # Reset

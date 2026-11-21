@@ -13,7 +13,7 @@ def train():
 
     device = torch.device("mps" if torch.mps.is_available() else "cpu")
     # Load BC dataset for the reference pose and action scale.
-    dataset = np.load("movement/rl/datasets/run1.npz")
+    dataset = np.load("movement/rl/data/run1.npz")
 
     q_default = dataset["q_default"]
 
