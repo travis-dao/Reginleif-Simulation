@@ -6,3 +6,5 @@ __pycache__/
 *.npz
 
 .DS_Store
+
+/logs/rsl_rl

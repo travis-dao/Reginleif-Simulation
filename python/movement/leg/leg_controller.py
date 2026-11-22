@@ -134,11 +134,9 @@ class LegController:
             for leg in self.legs:
                 leg.resume_stance()
             order = self._select_order()
-            changed = order is not self._gait
-            self._gait = order
-            first = (self._most_overdue_leg() if changed and self._last_swing_leg >= 0 else self._after(self._last_swing_leg))
-            push = self.start_push_s if (order is Movement.ORDER_WALK_F or order is Movement.ORDER_WALK_B) else 0.0
-            self._schedule_from(first, push)
+            push = self.start_push_s if order in (Movement.ORDER_WALK_F, Movement.ORDER_WALK_B) else 0.0
+            if not self._set_gait(order, push):
+                self._schedule_from(self._after(self._last_swing_leg), push)
 
         elif new is MoveState.WALKING and old is MoveState.STOPPING:
             # resume the clock where the gap left off (or after the in-flight swing + gap)
@@ -178,13 +176,7 @@ class LegController:
 
             if grounded and not self.grounded:               # a swing just finished
                 self.swing_leg = -1
-                new_order = self._select_order()
-                if new_order is not self._gait:
-                    self._gait = new_order
-                    if self._last_swing_leg >= 0:
-                        # keep the time to the next swing, but re-sequence from the most overdue leg
-                        remaining = min((1.0 - p) for p in self._psi) * self.period_s
-                        self._schedule_from(self._most_overdue_leg(), remaining)
+                self._set_gait(self._select_order())
             self.grounded = grounded
 
             if self.move_state is MoveState.WALKING:
@@ -276,3 +268,20 @@ class LegController:
         self._last_swing_leg = i
         self.swing_leg = i
         self.legs[i].start_swing(self.legs[i].get_nominal_landing_pos());
+
+    def _set_gait(self, order, delay_s: Optional[float] = None) -> bool:
+        """Switch gait and re-phase the clock. Returns True if the gait changed.
+
+        delay_s: time until the first swing. If None, keep the time to the
+                next scheduled swing.
+        """
+        if order is self._gait:
+            return False
+
+        if delay_s is None:
+            delay_s = max(min(1.0 - p for p in self._psi), 0.0) * self.period_s
+
+        self._gait = order
+        first = self._most_overdue_leg() if self._last_swing_leg >= 0 else order[0]
+        self._schedule_from(first, delay_s)
+        return True

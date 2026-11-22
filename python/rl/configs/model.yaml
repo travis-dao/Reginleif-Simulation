@@ -1,0 +1,90 @@
+# Single source of truth for: observation layout, network size, BC + PPO hyperparameters,
+# env/reward settings and eval grid. Used by gen_mpc_data.py, the Playground env, BC, train.py, eval.py.
+# CHANGING anything under `obs:` changes the observation size -> regenerate datasets + retrain.
+
+policy_hz: 50.0
+
+obs:
+  action_history_s: 0.5     # seconds of past actions fed to the net  (N = round(s * policy_hz) = 25 steps)
+  action_scale: 1.0         # q_target = q_default + action_scale * action   (must match the teacher labels)
+  # !! Set these to the values that were in your old rl/environments/env.py (the defaults are legged_gym-style guesses)
+  gyro_scale: 0.25
+  cmd_scale_lin: 2.0         # applies to both v_x and v_y
+  cmd_scale_ang: 0.25
+  qd_scale: 0.05
+
+# Observation layout (flattened, in this order):
+#   gyro(3) | gravity in body frame(3) | cmd [v_x m/s, v_y m/s, yaw_rate rad/s](3) | q - q_default(12) | qd(12) | past actions (N*12, oldest -> newest)
+#   v_y is always 0 in the MPC data (the MPC has no lateral command); it becomes active in the RL stage.
+
+actor:
+  hidden_dims: [512, 256, 128]   # number of layers = len(hidden_dims)
+  activation: elu                # elu | relu | tanh | selu | lrelu
+  init_std: 0.2                  # small so PPO fine-tuning doesn't wash out the BC policy
+
+critic:
+  hidden_dims: [512, 256, 128]
+  activation: elu
+
+bc:
+  lr: 1.0e-3
+  weight_decay: 1.0e-5
+  # Anti-copycat augmentation: the 25-step action history makes 'repeat the last action' an easy shortcut.
+  history_noise_std: 0.02        # gaussian noise (action units) added to the history inputs during training
+  history_dropout_p: 0.2         # per-sample probability that the whole history is zeroed during training
+  epochs: 60
+  batch_size: 4096
+  val_frac: 0.1                  # only used when --val_dir is not given
+
+ppo:
+  num_learning_epochs: 5
+  num_mini_batches: 4
+  learning_rate: 1.0e-4          # low: we start from a BC policy
+  schedule: adaptive
+  gamma: 0.99
+  lam: 0.95
+  entropy_coef: 0.0
+  desired_kl: 0.01
+  max_grad_norm: 1.0
+  value_loss_coef: 1.0
+  use_clipped_value_loss: true
+  clip_param: 0.2
+
+runner:
+  num_steps_per_env: 24
+  max_iterations: 1500
+  save_interval: 50
+  experiment_name: quadruped_bc_ppo
+  run_name: ""
+  logger: tensorboard
+  seed: 1
+
+env:
+  episode_length: 1000           # policy steps (20 s at 50 Hz)
+  cmd_vx_range: [-0.067, 0.067]  # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
+  cmd_vy_range: [0.0, 0.0]       # m/s, lateral: 0 until the RL stage (the MPC cannot do it)
+  cmd_yaw_range: [-0.3, 0.3]     # rad/s
+  stand_prob: 0.1                # fraction of episodes commanded to stand still
+  min_height_frac: 0.6           # terminate if base z < frac * START_HEIGHT (same rule as the data generator)
+  push:
+    prob: 0.7                    # fraction of episodes that get one push
+    accel_range: [0.5, 4.0]      # push acceleration in m/s^2 (force = accel * mass)
+    t_range_s: [3.0, 10.0]
+    dur_s: 0.1
+  track_sigma_lin: 0.005         # exp(-err^2 / sigma)
+  track_sigma_yaw: 0.05
+  reward_scales:
+    track_lin: 1.0
+    track_yaw: 0.5
+    upright: -2.0
+    action_rate: -0.05
+    pose: -0.1
+    alive: 0.1
+    termination: -5.0
+
+eval:
+  cmds: [[0.0, 0.0, 0.0], [0.08, 0.0, 0.0], [-0.08, 0.0, 0.0], [0.0, 0.0, 0.3], [0.08, 0.0, 0.3]]   # [vx, vy, yaw]; only used when eval.py has no --manifest
+  accels: [1.0, 2.0, 3.0, 4.0]
+  angles_deg: [0, 90, 180, 270]
+  push_t_s: 6.0
+  episode_s: 10.0
