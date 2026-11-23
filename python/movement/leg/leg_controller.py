@@ -10,7 +10,8 @@ from typing import List, Optional
 import math
 
 from .leg import Leg
-from .leg_config import Movement, Offset, Theta3, Vec3
+from .leg_config import (Movement, Offset, Theta3, Vec3,
+                         Gait, GAIT_WALK_F, GAIT_WALK_B, GAIT_TURN_L, GAIT_TURN_R)
 from .movement import LegDriver
 from enum import Enum, auto
 from motion.mpc import State
@@ -47,19 +48,12 @@ class LegController:
 
         self.move_state = MoveState.IDLE
 
-        T, G = Movement.SWING_DURATION_S, Movement.GAP_DURATION_S
-        self.duty_zheta = 4.0 # 5.0
-        self.duty = 1.0 - T / (self.duty_zheta * (T + G))      # >=0.75 = no overlap, <0.75 = overlap
-        self.period_s = T / (1.0 - self.duty)
-        self.t_stance_s = self.duty * self.period_s
-        self.v_max_mm_s = Movement.STEP_LENGTH_MM / self.t_stance_s
-
         self._psi = [0.0] * 4          # per-leg clock; the leg swings when it wraps past 1
         self._grounded_s = 0.0         # time since the last swing ended (replaces gap_remaining_s)
         self.start_push_s = 0.0
 
         self._nom_bf = [leg_to_body_frame(i, Offset.neutral_foot_pos_lf[i]) for i in range(4)]
-        self.max_step_y_mm = 80.0            # tune: sideways reach of the coxa
+        self.max_step_y_mm = 100.0            # tune: sideways reach of the coxa
         self.a_v_mm_s2 = 500.0               # twist slew limits, tune
         self.a_w_rad_s2 = 0.5
         self._cmd = (0.0, 0.0)               # requested (v mm/s, w rad/s)
@@ -71,7 +65,7 @@ class LegController:
         self.turn_v_eps = 5.0 # mm/s, below this, cound yaw cmd as "turn in place"
         self.turn_w_eps = 0.02 #rad/s
 
-        self._gait = Movement.ORDER_WALK_F
+        self._gait: Gait = GAIT_WALK_F
 
         self._state = State()
         self.body_roll = 0.0
@@ -111,31 +105,29 @@ class LegController:
                 best, best_d = i, d
         return best
 
-    def _select_order(self):
-        v, w = self._cmd                      # use the *command*, not the ramping achieved twist
+    def _select_gait(self) -> Gait:
+        v, w = self._cmd
         if abs(v) < self.turn_v_eps and abs(w) > self.turn_w_eps:
-            return Movement.ORDER_TURN_L if w > 0 else Movement.ORDER_TURN_R
-        return Movement.ORDER_WALK_B if v < 0 else Movement.ORDER_WALK_F
+            return GAIT_TURN_L if w > 0 else GAIT_TURN_R
+        return GAIT_WALK_B if v < 0 else GAIT_WALK_F
 
     def _after(self, last: int) -> int:
-        o = self._gait
-
+        o = self._gait.order
         if last < 0:
             return o[0]
-
         return o[(o.index(last) + 1) % len(o)]
 
     # transitions
     def _set_state(self, new: MoveState) -> None:
         old, self.move_state = self.move_state, new
-        G = Movement.GAP_DURATION_S
+        G = self.timing.gap_s
 
         if new is MoveState.WALKING and old is MoveState.IDLE:
             for leg in self.legs:
                 leg.resume_stance()
-            order = self._select_order()
-            push = self.start_push_s if order in (Movement.ORDER_WALK_F, Movement.ORDER_WALK_B) else 0.0
-            if not self._set_gait(order, push):
+            gait = self._select_gait()
+            push = self.start_push_s if gait in (GAIT_WALK_F, GAIT_WALK_B) else 0.0
+            if not self._set_gait(gait, push):
                 self._schedule_from(self._after(self._last_swing_leg), push)
 
         elif new is MoveState.WALKING and old is MoveState.STOPPING:
@@ -176,18 +168,18 @@ class LegController:
 
             if grounded and not self.grounded:               # a swing just finished
                 self.swing_leg = -1
-                self._set_gait(self._select_order())
+                self._set_gait(self._select_gait())
             self.grounded = grounded
 
             if self.move_state is MoveState.WALKING:
                 self._advance_clock(dt_s)
             elif self.move_state is MoveState.STOPPING:
                 # clock frozen: no new swings, finish the one in flight, then idle after a gap
-                if self.grounded and self._grounded_s >= Movement.GAP_DURATION_S:
+                if self.grounded and self._grounded_s >= self.timing.gap_s:
                     self._set_state(MoveState.IDLE)
 
         for i in range(4):
-            self.target_angles[i] = self.legs[i].update(dt_s)
+            self.target_angles[i] = self.legs[i].update(dt_s, self._gait)
             self.driver.set_angles(i, self.target_angles[i])
 
     def swing_schedule(self, horizon_s: float):
@@ -219,11 +211,12 @@ class LegController:
     """Scale (v, w) together, which keeps R = v/w"""
     def _limit(self, v, w):
         T = self.t_stance_s
+        step_len = self.timing.step_length_mm
         k = 1.0
         for p in self._nom_bf:
             sx = abs(v - w * p.y) * T
             sy = abs(w * p.x) * T
-            k = min(k, Movement.STEP_LENGTH_MM / sx if sx > 1e-9 else 1.0, self.max_step_y_mm / sy if sy > 1e-9 else 1.0)
+            k = min(k, step_len / sx if sx > 1e-9 else 1.0, self.max_step_y_mm / sy if sy > 1e-9 else 1.0)
         return v * k, w * k
 
     def _update_twist(self, dt_s: float) -> None:
@@ -245,13 +238,11 @@ class LegController:
             leg.set_stance(vel, step)
 
     def _schedule_from(self, first: int, delay_s: float) -> None:
-        """Make `first` swing in delay_s, then the rest in order, a quarter period apart."""
-        o = self._gait
+        o, offs = self._gait.order, self._gait.phase_offsets
         i0 = o.index(first)
         tau0 = delay_s / self.period_s
         for j in range(4):
-            # psi may go negative: that just means "fires later than one period from now"
-            self._psi[o[(i0 + j) % 4]] = 1.0 - (tau0 + j / 4.0)
+            self._psi[o[(i0 + j) % 4]] = 1.0 - (tau0 + offs[j])
 
     def _advance_clock(self, dt_s: float) -> None:
         dphase = dt_s / self.period_s
@@ -269,19 +260,21 @@ class LegController:
         self.swing_leg = i
         self.legs[i].start_swing(self.legs[i].get_nominal_landing_pos());
 
-    def _set_gait(self, order, delay_s: Optional[float] = None) -> bool:
-        """Switch gait and re-phase the clock. Returns True if the gait changed.
-
-        delay_s: time until the first swing. If None, keep the time to the
-                next scheduled swing.
-        """
-        if order is self._gait:
+    def _set_gait(self, gait: Gait, delay_s: Optional[float] = None) -> bool:
+        if gait is self._gait:
             return False
-
         if delay_s is None:
             delay_s = max(min(1.0 - p for p in self._psi), 0.0) * self.period_s
-
-        self._gait = order
-        first = self._most_overdue_leg() if self._last_swing_leg >= 0 else order[0]
+        self._gait = gait
+        first = self._most_overdue_leg() if self._last_swing_leg >= 0 else gait.order[0]
         self._schedule_from(first, delay_s)
         return True
+
+    @property
+    def timing(self):      return self._gait.timing
+    @property
+    def period_s(self):    return self._gait.timing.period_s
+    @property
+    def t_stance_s(self):  return self._gait.timing.t_stance_s
+    @property
+    def v_max_mm_s(self):  return self._gait.timing.v_max_mm_s

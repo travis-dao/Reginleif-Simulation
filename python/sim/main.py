@@ -86,13 +86,13 @@ def sim():
             
             state_visualizer.update(
                 swing_leg=Movement.index_name(lc.swing_leg),
-                gait=Movement.order_name(lc._gait),
+                gait=Movement.order_name(lc._gait.order),
                 vel_cmd=core.v_cmd_mps * 1e3,
                 vel_real=lc._v,
                 vel_est=core.estimator.state.linear_vel[0] * 1e3,
                 yaw_cmd=core.yaw_rate_cmd,
                 yaw_real=lc._w,
-                leg_duty=lc.duty
+                leg_duty=lc._gait.timing.duty
             )
 
             # Engage MPC once the robot has settled.

@@ -66,7 +66,7 @@ class Movement:
     STEP_LENGTH_MM = 100.0
     STEP_HEIGHT_MM = 40.0
     SWING_DURATION_S = 0.3
-    GAP_DURATION_S = SWING_DURATION_S / 2 # 1/4 of swing duration seems to work well
+    GAP_DURATION_S = SWING_DURATION_S / 4 # 1/4 of swing duration seems to work well
 
     # indexed by (current swing leg + 1); index 0 is "no leg yet" (-1)
     ORDER_WALK_F: Tuple[int, ...] = (0, 2, 1, 3)
@@ -91,6 +91,45 @@ class Movement:
             3: "BL",
         }.get(index, "Unknown")
 
+@dataclass(frozen=True)
+class GaitTiming:
+    swing_s: float                    # leg in the air
+    gap_s: float                      # min all-grounded gap (used for STOPPING/IDLE)
+    duty_zheta: float = 4.0           # your "zheta"; larger = more overlap
+    step_length_mm: float = 100.0
+    step_height_mm: float = 40.0
+
+    @property
+    def duty(self) -> float:
+        return 1.0 - self.swing_s / (self.duty_zheta * (self.swing_s + self.gap_s))
+
+    @property
+    def period_s(self) -> float:
+        return self.swing_s / (1.0 - self.duty)
+
+    @property
+    def t_stance_s(self) -> float:
+        return self.duty * self.period_s
+
+    @property
+    def v_max_mm_s(self) -> float:
+        return self.step_length_mm / self.t_stance_s
+
+@dataclass(frozen=True)
+class Gait:
+    name: str
+    order: Tuple[int, ...]
+    timing: GaitTiming
+    # phase offset (fraction of period) of the k-th leg in `order`
+    phase_offsets: Tuple[float, ...] = (0.0, 0.25, 0.5, 0.75)
+
+
+_T, _G = Movement.SWING_DURATION_S, Movement.GAP_DURATION_S
+
+GAIT_WALK_F = Gait("WALK_F", Movement.ORDER_WALK_F, GaitTiming(_T,       0,       duty_zheta=3.0))
+GAIT_WALK_B = Gait("WALK_B", Movement.ORDER_WALK_B, GaitTiming(_T,       _G * 1.3,       duty_zheta=3.8))
+GAIT_TURN_R = Gait("TURN_R", Movement.ORDER_TURN_R, GaitTiming(_T * 1.5, _G * 4, duty_zheta=4.0, step_length_mm=100.0, step_height_mm=60))
+GAIT_TURN_L = Gait("TURN_L", Movement.ORDER_TURN_L, GaitTiming(_T * 1.5, _G * 4, duty_zheta=4.0, step_length_mm=100.0, step_height_mm=60))
 
 _FOOT_NEUTRAL_MAG = Vec3(100.0, 100.0, -30.0)
 _LEG_BASE_MAG = Vec3(34.0, 43.5, 0.0)

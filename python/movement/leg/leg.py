@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from .leg_config import (BODY_COXA_X_MM, FEMUR_LENGTH_MM, TIBIA_LENGTH_MM, Movement, Offset, Theta3, Vec3, c_max, c_min,)
+from .leg_config import (BODY_COXA_X_MM, FEMUR_LENGTH_MM, TIBIA_LENGTH_MM, Movement, Offset, Theta3, Vec3, c_max, c_min, Gait, GaitTiming, GAIT_WALK_F)
 
 from .movement import IK
 from .limits import ServoConfig
@@ -64,8 +64,9 @@ class Leg:
         self.mpc_offset_lf = Vec3(0.0, 0.0, 0.0)
         self._mpc_offset_cmd = Vec3(0.0, 0.0, 0.0)
 
+        self._gait: Gait = GAIT_WALK_F
         self.stance_vel = Vec3(0.0, 0.0, 0.0)                       # mm/s: live sweep velocity
-        self.step_vec = Vec3(Movement.STEP_LENGTH_MM, 0.0, 0.0)    # mm: foot displacement over one stance
+        self.step_vec = Vec3(self._gait.timing.step_length_mm, 0.0, 0.0)    # mm: foot displacement over one stance
 
         self._move_leg()
 
@@ -98,7 +99,7 @@ class Leg:
     def swing_time_remaining_s(self) -> float:
         if self.leg_state != LegState.SWING:
             return 0.0
-        return (1.0 - self.swing_phase) * Movement.SWING_DURATION_S
+        return (1.0 - self.swing_phase) * self._gait.timing.swing_s
 
     def set_mpc_offset(self, offset_lf: Vec3) -> None:
         self._mpc_offset_cmd = offset_lf.copy()
@@ -130,7 +131,9 @@ class Leg:
     def get_state(self) -> LegState:
         return self.leg_state
 
-    def update(self, dt_s: float) -> Theta3:
+    def update(self, dt_s: float, gait: Gait) -> Theta3:
+        self._gait = gait
+
         if self.leg_state == LegState.SWING:
             self._update_swing(dt_s)
         elif self.leg_state == LegState.STANCE:
@@ -199,7 +202,7 @@ class Leg:
         self.stance_phase = 1.0 if span <= 1e-6 else min(done / span, 1.0)   # debug only
     
     def _update_swing(self, dt_s: float) -> None:
-        self.swing_phase += dt_s / Movement.SWING_DURATION_S
+        self.swing_phase += dt_s / self._gait.timing.swing_s
         self.swing_phase = min(self.swing_phase, 1.0)
 
         t = self.swing_phase
@@ -214,7 +217,7 @@ class Leg:
         foot.y = start.y + s * (target.y - start.y)
 
         # Parabolic clearance arc: zero at both endpoints, maximum at midpoint.
-        clearance = 4.0 * Movement.STEP_HEIGHT_MM * t * (1.0 - t)
+        clearance = 4.0 * self._gait.timing.step_height_mm * t * (1.0 - t)
         foot.z = start.z + t * (target.z - start.z) + clearance
 
         if t >= 1.0:
