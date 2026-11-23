@@ -126,12 +126,12 @@ class Gait:
 
 _T, _G = Movement.SWING_DURATION_S, Movement.GAP_DURATION_S
 
-GAIT_WALK_F = Gait("WALK_F", Movement.ORDER_WALK_F, GaitTiming(_T,       0,       duty_zheta=3.0))
-GAIT_WALK_B = Gait("WALK_B", Movement.ORDER_WALK_B, GaitTiming(_T,       _G * 1.3,       duty_zheta=3.8))
-GAIT_TURN_R = Gait("TURN_R", Movement.ORDER_TURN_R, GaitTiming(_T * 1.5, _G * 4, duty_zheta=4.0, step_length_mm=100.0, step_height_mm=60))
-GAIT_TURN_L = Gait("TURN_L", Movement.ORDER_TURN_L, GaitTiming(_T * 1.5, _G * 4, duty_zheta=4.0, step_length_mm=100.0, step_height_mm=60))
+GAIT_WALK_F = Gait("WALK_F", Movement.ORDER_WALK_F, GaitTiming(_T,       _G,     duty_zheta=3.8))
+GAIT_WALK_B = Gait("WALK_B", Movement.ORDER_WALK_B, GaitTiming(_T * 1.3,       _G * 1.3,     duty_zheta=4.0))
+GAIT_TURN_R = Gait("TURN_R", Movement.ORDER_TURN_R, GaitTiming(_T * 1.5, _G * 4, duty_zheta=4.0))
+GAIT_TURN_L = Gait("TURN_L", Movement.ORDER_TURN_L, GaitTiming(_T * 1.5, _G * 4, duty_zheta=4.0))
 
-_FOOT_NEUTRAL_MAG = Vec3(100.0, 100.0, -30.0)
+_FOOT_NEUTRAL_MAG = Vec3(90.0, 90.0, -30.0)
 _LEG_BASE_MAG = Vec3(34.0, 43.5, 0.0)
 _QUADRANT_SIGN = (
     Vec3(+1, +1, +1),  # Front Left

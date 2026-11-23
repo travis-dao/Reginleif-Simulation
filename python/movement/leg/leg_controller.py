@@ -50,11 +50,11 @@ class LegController:
 
         self._psi = [0.0] * 4          # per-leg clock; the leg swings when it wraps past 1
         self._grounded_s = 0.0         # time since the last swing ended (replaces gap_remaining_s)
-        self.start_push_s = 0.0
+        self.start_push_s = 0.2
 
         self._nom_bf = [leg_to_body_frame(i, Offset.neutral_foot_pos_lf[i]) for i in range(4)]
         self.max_step_y_mm = 100.0            # tune: sideways reach of the coxa
-        self.a_v_mm_s2 = 500.0               # twist slew limits, tune
+        self.a_v_mm_s2 = 300.0               # twist slew limits, tune
         self.a_w_rad_s2 = 0.5
         self._cmd = (0.0, 0.0)               # requested (v mm/s, w rad/s)
         self._v_cmd_xy: Vec3 = Vec3(0.0, 0.0, 0.0)
@@ -70,10 +70,7 @@ class LegController:
         self._state = State()
         self.body_roll = 0.0
         self.body_pitch = 0.0
-
-        self.init()
-
-    def init(self) -> None:
+        
         for i in range(4):
             self.legs[i] = Leg(i)
 
@@ -266,7 +263,8 @@ class LegController:
         if delay_s is None:
             delay_s = max(min(1.0 - p for p in self._psi), 0.0) * self.period_s
         self._gait = gait
-        first = self._most_overdue_leg() if self._last_swing_leg >= 0 else gait.order[0]
+        # first = self._most_overdue_leg() if self._last_swing_leg >= 0 else gait.order[0]
+        first = self._last_swing_leg if self._last_swing_leg >= 0 else gait.order[0]
         self._schedule_from(first, delay_s)
         return True
 

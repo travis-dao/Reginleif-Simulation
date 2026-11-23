@@ -150,7 +150,7 @@ class Core:
             x[2] = yaw_end
             x[3:6] = p
             x[8] = w                                        # yaw rate
-            x[9:12] = rotation_matrix_yaw(yaw_end) @ np.array([v * 2, 0.0, 0.0])
+            x[9:12] = rotation_matrix_yaw(yaw_end) @ np.array([v, 0.0, 0.0])
             x[12] = s0.g
             out.append(x)
         return out
