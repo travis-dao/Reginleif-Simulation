@@ -1,0 +1,3 @@
+bc_ckpt: python/rl/data/bc_actor_v2.pt
+resume: null
+set: []

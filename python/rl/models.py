@@ -34,3 +34,15 @@ def load_bc_into_actor(actor: nn.Module, ckpt_path: str, device="cpu") -> None:
                                  "(obs size / hidden dims differ from the BC checkpoint)")
             m.weight.copy_(w.to(m.weight.device)); m.bias.copy_(b.to(m.bias.device))
     print(f"loaded BC weights from {ckpt_path} into {len(dst)} actor layers")
+
+
+def actor_mean(actor: nn.Module, x: torch.Tensor, activation: str) -> torch.Tensor:
+    """Deterministic action (distribution mean) computed from the rsl_rl actor's own Linear layers, WITH gradients.
+    Independent of rsl_rl's forward() signature. Valid because obs_normalization is off and the std is a free parameter."""
+    lins = [m for m in actor.modules() if isinstance(m, nn.Linear)]
+    act = ACTIVATIONS[activation]()
+    for i, layer in enumerate(lins):
+        x = layer(x)
+        if i < len(lins) - 1:
+            x = act(x)
+    return x

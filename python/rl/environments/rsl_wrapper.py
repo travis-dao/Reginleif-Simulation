@@ -33,6 +33,7 @@ class PlaygroundVecEnv(VecEnv):
         self.episode_length_buf = torch.zeros(num_envs, dtype=torch.long, device=self.device)
         self._key = jax.random.PRNGKey(seed)
         self.last_done = self.last_metrics = None
+        self.log_obs, self.obs_log, self.obs_log_max = False, [], 64      # used by bc_reg.py
 
         vreset, vstep = jax.vmap(env.reset), jax.vmap(env.step)
         self._vreset = jax.jit(vreset)
@@ -57,7 +58,8 @@ class PlaygroundVecEnv(VecEnv):
         return self.get_observations()
 
     def get_observations(self) -> TensorDict:
-        return TensorDict({k: _to_torch(v, self.device) for k, v in self._state.obs.items()}, batch_size=[self.num_envs], device=self.device)
+        return TensorDict({k: _to_torch(v, self.device) for k, v in self._state.obs.items()},
+                          batch_size=[self.num_envs], device=self.device)
 
     def step(self, actions: torch.Tensor):
         a = actions.detach().clamp(-self.clip_actions, self.clip_actions).float()
@@ -66,5 +68,10 @@ class PlaygroundVecEnv(VecEnv):
         self.last_done, self.last_metrics = done, metrics            # per-env, used by eval.py
         dones = (_to_torch(done, self.device) > 0.5)
         self.episode_length_buf = torch.where(dones, torch.zeros_like(self.episode_length_buf), self.episode_length_buf + 1)
-        extras = {"time_outs": _to_torch(trunc, self.device), "log": {f"Episode/{k_}": float(v) for k_, v in jax.device_get(means).items()}}
-        return self.get_observations(), _to_torch(rew, self.device), dones.long(), extras
+        extras = {"time_outs": _to_torch(trunc, self.device),
+                  "log": {f"Episode/{k_}": float(v) for k_, v in jax.device_get(means).items()}}
+        obs = self.get_observations()
+        if self.log_obs:                                    # states the policy is about to act on
+            self.obs_log.append(obs["policy"].clone())
+            del self.obs_log[:-self.obs_log_max]
+        return obs, _to_torch(rew, self.device), dones.long(), extras

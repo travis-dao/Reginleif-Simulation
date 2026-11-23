@@ -13,9 +13,27 @@ Q_DEFAULT_PATH = RL_DIR / "data" / "q_default.npy"
 NUM_JOINTS = 12
 
 
-def load_config(path: str | Path | None = None) -> dict:
+def load_config(path: str | Path | None = None, overrides: list[str] | None = None) -> dict:
+    """overrides: ["env.cmd_vy_range=[-0.1,0.1]", "ppo.learning_rate=5e-5", ...] (values parsed as YAML).
+    Overriding `obs.*` changes the obs size and is not supported here (edit model.yaml and regenerate data)."""
     with open(path or CONFIG_PATH) as f:
-        return yaml.safe_load(f)
+        cfg = yaml.safe_load(f)
+    for item in overrides or []:
+        key, _, val = item.partition("=")
+        node = cfg
+        *parents, leaf = key.strip().split(".")
+        for p in parents:
+            node = node[p]
+        if leaf not in node:
+            raise KeyError(f"unknown config key: {key}")
+        v = yaml.safe_load(val)
+        if isinstance(v, str):                      # PyYAML reads "5e-5" as a string
+            try:
+                v = float(v)
+            except ValueError:
+                pass
+        node[leaf] = v
+    return cfg
 
 
 @dataclass(frozen=True)

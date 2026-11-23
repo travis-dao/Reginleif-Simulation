@@ -37,7 +37,6 @@ POLICY_HZ = OBS.policy_hz
 PUSH_T = 6.0          # s, gait is well established by then
 PUSH_DUR = 0.1        # s
 GAIT_SLOT_S = 0.45    # a swing starts every 0.45 s (period 1.8 s / 4 legs); offsets below cycle which leg is mid-swing
-YAW_CMD = 0.30        # rad/s for the turn scenario (limit is ~0.4)
 
 # name, input(x, y)
 COMMANDS = (*generate_walk_commands(), ("turn_right", 1.0, 0.0), ("turn_left", -1.0, 0.0), ("stand", 0.0, 0.0))

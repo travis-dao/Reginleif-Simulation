@@ -1,0 +1,8 @@
+{
+ "obs_dim": 333,
+ "history_len": 25,
+ "policy_hz": 50.0,
+ "seed": 0,
+ "mode": "train",
+ "noise_sigma": 0.03
+}

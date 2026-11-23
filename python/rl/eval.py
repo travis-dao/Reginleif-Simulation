@@ -1,6 +1,7 @@
 # Evaluate a BC checkpoint (bc_actor.pt) or an rsl_rl checkpoint (model_*.pt).
 #   python python/rl/eval.py offline --ckpt python/rl/data/bc_actor.pt --data python/rl/data/mpc
 #   python python/rl/eval.py rollout --ckpt logs/rsl_rl/<exp>/<run>/model_500.pt --manifest python/rl/data/mpc/manifest.json
+#   python python/rl/eval.py rollout --ckpt python/rl/data/bc_actor_v2.pt --manifest python/rl/data/mpc_relabeled/manifest.json
 #
 # offline : one-step action MSE vs the teacher on the fixed test set (teacher-forced: history comes from the MPC), overall
 #           and in the second after the push. Good for BC debugging, NOT a measure of closed-loop quality.
@@ -86,6 +87,18 @@ def teacher_stats(manifest_path):
     return out
 
 
+def pick_cmds(cmds, n):
+    """Choose up to n commands. Always keep stand + turn-in-place (vx = vy = 0): evenly spaced picking over the
+    sorted list used to skip them. The remaining slots are spread evenly over the other commands."""
+    if len(cmds) <= n:
+        return list(cmds)
+    must = [c for c in cmds if abs(c[0]) < 1e-3 and abs(c[1]) < 1e-3]
+    rest = [c for c in cmds if c not in must]
+    k = max(n - len(must), 0)
+    pick = [rest[i] for i in np.linspace(0, len(rest) - 1, k).round().astype(int)] if k and rest else []
+    return sorted(set(must + pick))
+
+
 def rollout(args, policy, device, cfg):
     import jax
     import jax.numpy as jnp
@@ -96,15 +109,13 @@ def rollout(args, policy, device, cfg):
     steps = int(e["episode_s"] * OBS.policy_hz)
     teacher = teacher_stats(args.manifest) if args.manifest else []
     if teacher:                                       # evaluate the student on the teacher's own commands
-        cmds = sorted({t["cmd"] for t in teacher})
-        if len(cmds) > args.n_cmds:
-            cmds = [cmds[i] for i in np.linspace(0, len(cmds) - 1, args.n_cmds).round().astype(int)]
+        cmds = pick_cmds(sorted({t["cmd"] for t in teacher}), args.n_cmds)
     else:
         cmds = [tuple(c) for c in e["cmds"]]
     grid = [(c, 0.0, 0.0) for c in cmds] + [(c, a, g) for c in cmds for a in e["accels"] for g in e["angles_deg"]]
     n = len(grid)
     print(f"{len(cmds)} commands x ({1} + {len(e['accels'])} accels x {len(e['angles_deg'])} angles) = {n} scenarios")
-    env = QuadrupedEnv(config_overrides={"episode_length": steps + 5})   # no timeouts during eval: any done == fell
+    env = QuadrupedEnv(config_overrides={"episode_length": steps + 5, "dr.enabled": False})   # no timeouts, no DR: any done == fell
     vec = PlaygroundVecEnv(env, n, seed=0, device=device)
 
     cmd = jnp.asarray([g[0] for g in grid], jnp.float32)
@@ -112,13 +123,14 @@ def rollout(args, policy, device, cfg):
     ang = jnp.deg2rad(jnp.asarray([g[2] for g in grid], jnp.float32))
     st = vec._state
     info = dict(st.info)
-    info.update(cmd=cmd, push_acc=acc, push_ang=ang,
+    info.update(cmd=cmd, push_acc=acc, push_ang=ang, next_cmd=jnp.full((n,), 1 << 30, jnp.int32),   # fixed command all episode
                 next_push=jnp.where(acc > 0, int(e["push_t_s"] * OBS.policy_hz), 1 << 30).astype(jnp.int32))
     vec._state = st.replace(info=info, obs=jax.vmap(env.get_obs)(st.data, info))
 
+    term_keys = [k for k in cfg["env"]["reward_scales"] if k != "termination"]
+    tsum = {k: np.zeros(n) for k in term_keys}
     alive = np.ones(n, bool); lin = np.zeros(n); yaw = np.zeros(n); cnt = np.zeros(n); ys = np.zeros(n); ys2 = np.zeros(n)
     for t in range(steps):
-        print(f"step {t}/{steps}")
         with torch.no_grad():
             act = policy(vec.get_observations()["policy"])
         vec.step(act)
@@ -127,6 +139,8 @@ def rollout(args, policy, device, cfg):
         ok = alive & ~done
         lin[ok] += m["lin_err"][ok]; yaw[ok] += m["yaw_err"][ok]; cnt[ok] += 1
         ys[ok] += m["yaw_signed"][ok]; ys2[ok] += m["yaw_signed"][ok] ** 2
+        for k_ in term_keys:
+            tsum[k_][ok] += m[k_][ok]
         alive &= ~done
     c_ = np.maximum(cnt, 1)
     lin, yaw, ybias = lin / c_, yaw / c_, ys / c_
@@ -148,6 +162,17 @@ def rollout(args, policy, device, cfg):
         t = [x for x in teacher if x["cmd"] == c and x["accel"] == 0.0]
         tl, ty = (f"{t[0]['lin']:8.4f}", f"{t[0]['yaw']:8.4f}") if t else (f"{'-':>8}", f"{'-':>8}")
         print(f"{str(list(c)):>50} {alive[i]:5d} {lin[i]:8.4f} {tl} {yaw[i]:8.4f} {ty}")
+    # ---- which reward terms dominate? (unpushed scenarios; per-step mean, then weight x mean = reward contribution)
+    nom = np.array([g[1] == 0.0 for g in grid])
+    print(f"\nreward terms, unpushed scenarios (contribution = weight x mean per step)")
+    print(f"{'term':>14} {'weight':>8} {'mean':>10} {'contrib':>10}")
+    tot = 0.0
+    for k_ in term_keys:
+        mean = float((tsum[k_][nom] / c_[nom]).mean()); w = cfg["env"]["reward_scales"][k_]
+        tot += w * mean
+        print(f"{k_:>14} {w:8.3f} {mean:10.4f} {w * mean:10.4f}")
+    print(f"{'sum':>14} {'':>8} {'':>10} {tot:10.4f}")
+
     print(f"\nyaw-rate error breakdown (signed, rad/s): bias = steady offset, std = oscillation")
     print(f"{'cmd':>50} {'bias stu':>9} {'bias mpc':>9} {'std stu':>8} {'std mpc':>8}")
     for c in cmds:

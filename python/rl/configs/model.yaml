@@ -20,7 +20,7 @@ obs:
 actor:
   hidden_dims: [512, 256, 128]   # number of layers = len(hidden_dims)
   activation: elu                # elu | relu | tanh | selu | lrelu
-  init_std: 0.2                  # small so PPO fine-tuning doesn't wash out the BC policy
+  init_std: 0.02                  # small so PPO fine-tuning doesn't wash out the BC policy
 
 critic:
   hidden_dims: [512, 256, 128]
@@ -39,7 +39,7 @@ bc:
 ppo:
   num_learning_epochs: 5
   num_mini_batches: 4
-  learning_rate: 1.0e-4          # low: we start from a BC policy
+  learning_rate: 3.0e-5          # low: we start from a BC policy
   schedule: adaptive
   gamma: 0.99
   lam: 0.95
@@ -61,26 +61,53 @@ runner:
 
 env:
   episode_length: 1000           # policy steps (20 s at 50 Hz)
-  cmd_vx_range: [-0.067, 0.067]  # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
-  cmd_vy_range: [0.0, 0.0]       # m/s, lateral: 0 until the RL stage (the MPC cannot do it)
-  cmd_yaw_range: [-0.3, 0.3]     # rad/s
-  stand_prob: 0.1                # fraction of episodes commanded to stand still
-  min_height_frac: 0.6           # terminate if base z < frac * START_HEIGHT (same rule as the data generator)
+  cmd_vx_range: [-0.10, 0.10]    # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
+  cmd_vy_range: [0.0, 0.0]       # m/s, lateral: 0 until the lateral curriculum stage (the MPC cannot do it)
+  cmd_yaw_range: [-0.4, 0.4]     # rad/s
+  stand_prob: 0.1                # probability that a freshly sampled command is "stand still"
+  cmd_resample_s: [1.0, 3.0]     # new command every U(lo, hi) seconds; [0, 0] disables mid-episode changes
+  cmd_p_brake: 0.15              # at a command change: go to zero (braking)
+  cmd_p_flip: 0.15               # at a command change: reverse the current command (direction change)
+  min_height_frac: 0.6           # terminate if base z < frac * measured standing height
   push:
-    prob: 0.7                    # fraction of episodes that get one push
-    accel_range: [0.5, 4.0]      # push acceleration in m/s^2 (force = accel * mass)
-    t_range_s: [3.0, 10.0]
+    prob: 0.8                    # fraction of episodes that get one push
+    accel_range: [0.5, 5.0]      # push acceleration in m/s^2 (force = accel * mass); eval tests up to 4.0
+    t_range_s: [1.0, 8.0]
     dur_s: 0.1
-  track_sigma_lin: 0.005         # exp(-err^2 / sigma)
-  track_sigma_yaw: 0.05
+  dr:                            # domain randomisation, sampled per episode (eval.py turns it off)
+    enabled: true
+    friction_range: [0.6, 1.4]         # scale on geom sliding friction
+    motor_strength_range: [0.85, 1.15] # scale on servo kp
+    mass_scale_range: [0.9, 1.1]       # payload: scales base weight
+    latency_steps_max: 1               # action delay of 0..N policy steps (20 ms each)
+  track_sigma_lin: 0.02         # exp(-err^2 / sigma)
+  track_sigma_yaw: 0.01
+  air_time_target: 0.2           # s: swing shorter than this at touchdown is penalised, longer is rewarded
+  air_time_bonus_clip: 0.3
+  joint_limit_margin: 0.05       # rad
   reward_scales:
     track_lin: 1.0
     track_yaw: 0.5
     upright: -2.0
     action_rate: -0.05
-    pose: -0.1
+    pose: -0.02                  # weak: agile motion must be allowed to leave the default pose
     alive: 0.1
-    termination: -5.0
+    feet_air_time: 0.5
+    foot_slip: -0.1
+    torque: -0.05                # dimensionless (normalised by actuator force range)
+    joint_limit: -1.0
+    termination: -10.0
+
+# Keeps the PPO actor close to the frozen BC baseline on baseline-like commands (see rl/bc_reg.py).
+bc_reg:
+  enabled: true
+  coef: 1.0
+  lr: 1.0e-4
+  steps_per_iter: 10              # supervised steps after every PPO update
+  batch_size: 4096
+  baseline_vx_abs_max: 0.10
+  baseline_yaw_abs_max: 0.35
+  anneal_iters: 0                # >0: linearly fade the coefficient to 0 over this many iterations
 
 eval:
   cmds: [[0.0, 0.0, 0.0], [0.08, 0.0, 0.0], [-0.08, 0.0, 0.0], [0.0, 0.0, 0.3], [0.08, 0.0, 0.3]]   # [vx, vy, yaw]; only used when eval.py has no --manifest

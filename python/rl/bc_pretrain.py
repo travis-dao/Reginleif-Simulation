@@ -1,5 +1,5 @@
 # Behavior-clone the MPC: supervised obs -> action on the .npz files from gen_mpc_data.py.
-#   python python/rl/bc_pretrain.py --train_dir python/rl/data/mpc_train --val_dir python/rl/data/mpc --out python/rl/data/bc_actor.pt
+#   python python/rl/bc_pretrain.py --train_dir python/rl/data/mpc_train_relabeled --val_dir python/rl/data/mpc_relabeled --out python/rl/data/bc_actor.pt
 # The checkpoint is loaded into the rsl_rl PPO actor by train.py --bc_ckpt.
 import argparse
 import sys
