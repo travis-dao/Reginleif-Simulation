@@ -1,7 +1,7 @@
 # Evaluate a BC checkpoint (bc_actor.pt) or an rsl_rl checkpoint (model_*.pt).
 #   python python/rl/eval.py offline --ckpt python/rl/data/bc_actor.pt --data python/rl/data/mpc
 #   python python/rl/eval.py rollout --ckpt logs/rsl_rl/<exp>/<run>/model_500.pt --manifest python/rl/data/mpc/manifest.json
-#   python python/rl/eval.py rollout --ckpt python/rl/data/bc_actor_v2.pt --manifest python/rl/data/mpc_relabeled/manifest.json
+#   python python/rl/eval.py rollout --ckpt python/rl/data/bc_actor.pt --manifest python/rl/data/mpc_relabeled/manifest.json
 #
 # offline : one-step action MSE vs the teacher on the fixed test set (teacher-forced: history comes from the MPC), overall
 #           and in the second after the push. Good for BC debugging, NOT a measure of closed-loop quality.
@@ -131,6 +131,7 @@ def rollout(args, policy, device, cfg):
     tsum = {k: np.zeros(n) for k in term_keys}
     alive = np.ones(n, bool); lin = np.zeros(n); yaw = np.zeros(n); cnt = np.zeros(n); ys = np.zeros(n); ys2 = np.zeros(n)
     for t in range(steps):
+        print(f"step {t}/{steps}")
         with torch.no_grad():
             act = policy(vec.get_observations()["policy"])
         vec.step(act)

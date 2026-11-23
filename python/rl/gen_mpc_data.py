@@ -69,8 +69,7 @@ def run_scenario(q_default, cmd_name, input_x, input_y, accel, angle_deg, push_t
     push_F_bf = np.zeros(3)
     push_start_idx, pushing, push_end = -1, False, -1.0
     fell, fell_t = False, -1.0
-    log = {k: [] for k in ("obs", "act", "contacts", "foot_pos_bf", "foot_cmd_bf", "landing_bf",
-                           "base_pos", "base_vel", "base_yaw", "time", "push_active")}
+    log = {k: [] for k in ("obs", "act", "contacts", "foot_pos_bf", "foot_cmd_bf", "landing_bf", "base_pos", "base_vel", "base_yaw", "time", "push_active")}
 
     rng = np.random.default_rng(seed)
     ou = np.zeros(NUM_JOINTS)

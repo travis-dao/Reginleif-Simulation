@@ -34,7 +34,7 @@ def main():
     ap.add_argument("--train_dir", required=True)
     ap.add_argument("--val_dir", default=None, help="e.g. the fixed MPC test set; otherwise a random val_frac split is used")
     ap.add_argument("--out", default="python/rl/data/bc_actor.pt")
-    ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--device", default="mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
     args = ap.parse_args()
     bc, a = CFG["bc"], CFG["actor"]
 

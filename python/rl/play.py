@@ -1,8 +1,8 @@
 # Watch a policy in CPU MuJoCo and print what the robot actually does with a given command.
 #
 #   mjpython python/rl/play.py --ckpt python/rl/data/bc_actor.pt logs/rsl_rl/<exp>/<run>/model_99.pt \
-#            --cmd 0.0667 0 0 --view
-#   mjpython python/rl/play.py --ckpt python/rl/data/bc_actor_v2.pt logs/rsl_rl/quadruped_bc_ppo/2026-11-23_08-28-51/model_50.pt --cmd 0.0667 0 0 --view
+#            --cmd 0.08333 0 0 --view
+#   mjpython python/rl/play.py --ckpt python/rl/data/bc_actor_v2.pt logs/rsl_rl/quadruped_bc_ppo/2026-11-23_08-28-51/model_50.pt --cmd 0.08333 0 0 --view
 #
 # --view opens a viewer per checkpoint, in order (close the window to continue; needs mjpython on macOS).
 # Without --view it runs headless and only prints the numbers, so BC and PPO can be compared side by side.

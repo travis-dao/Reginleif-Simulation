@@ -54,14 +54,14 @@ runner:
   num_steps_per_env: 24
   max_iterations: 1500
   save_interval: 50
-  experiment_name: quadruped_bc_ppo
+  experiment_name: bc_ppo
   run_name: ""
   logger: tensorboard
   seed: 1
 
 env:
   episode_length: 1000           # policy steps (20 s at 50 Hz)
-  cmd_vx_range: [-0.10, 0.10]    # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
+  cmd_vx_range: [-0.8333, 0.08333]    # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
   cmd_vy_range: [0.0, 0.0]       # m/s, lateral: 0 until the lateral curriculum stage (the MPC cannot do it)
   cmd_yaw_range: [-0.4, 0.4]     # rad/s
   stand_prob: 0.1                # probability that a freshly sampled command is "stand still"
@@ -87,7 +87,7 @@ env:
   joint_limit_margin: 0.05       # rad
   reward_scales:
     track_lin: 1.0
-    track_yaw: 0.5
+    track_yaw: 0.75
     upright: -2.0
     action_rate: -0.05
     pose: -0.02                  # weak: agile motion must be allowed to leave the default pose

@@ -56,7 +56,7 @@ class LegController:
 
         self._psi = [0.0] * 4          # per-leg clock; the leg swings when it wraps past 1
         self._grounded_s = 0.0         # time since the last swing ended (replaces gap_remaining_s)
-        self.start_push_s = 0.0
+        self.start_push_s = 0.1
 
         self._nom_bf = [leg_to_body_frame(i, Offset.neutral_foot_pos_lf[i]) for i in range(4)]
         self.max_step_y_mm = 80.0            # tune: sideways reach of the coxa
