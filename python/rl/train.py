@@ -50,7 +50,8 @@ def main():
     train_cfg = rsl_rl_train_cfg(cfg)
     env = PlaygroundVecEnv(QuadrupedEnv(default_config(cfg)), args.num_envs, seed=train_cfg["seed"], device=args.device)
 
-    log_dir = Path("logs/rsl_rl") / train_cfg["experiment_name"] / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    # log_dir = Path("logs/rsl_rl") / train_cfg["experiment_name"] / datetime.now().strftime("%Y-%m-%d_%H")
+    log_dir = Path("logs/rsl_rl") / datetime.now().strftime("%Y-%m-%d_%H")
     log_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy(args.config, log_dir / "model.yaml")
     (log_dir / "overrides.yaml").write_text(yaml.safe_dump({"set": args.set, "resume": args.resume, "bc_ckpt": args.bc_ckpt}))

@@ -61,9 +61,9 @@ runner:
 
 env:
   episode_length: 1000           # policy steps (20 s at 50 Hz)
-  cmd_vx_range: [-0.8333, 0.08333]    # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
+  cmd_vx_range: [-0.08333, 0.08333]    # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
   cmd_vy_range: [0.0, 0.0]       # m/s, lateral: 0 until the lateral curriculum stage (the MPC cannot do it)
-  cmd_yaw_range: [-0.4, 0.4]     # rad/s
+  cmd_yaw_range: [-0.5, 0.5]     # rad/s
   stand_prob: 0.1                # probability that a freshly sampled command is "stand still"
   cmd_resample_s: [1.0, 3.0]     # new command every U(lo, hi) seconds; [0, 0] disables mid-episode changes
   cmd_p_brake: 0.15              # at a command change: go to zero (braking)
@@ -106,7 +106,7 @@ bc_reg:
   steps_per_iter: 10              # supervised steps after every PPO update
   batch_size: 4096
   baseline_vx_abs_max: 0.10
-  baseline_yaw_abs_max: 0.35
+  baseline_yaw_abs_max: 0.5
   anneal_iters: 0                # >0: linearly fade the coefficient to 0 over this many iterations
 
 eval:
