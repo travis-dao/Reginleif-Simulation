@@ -125,8 +125,12 @@ class DiscreteModel:
     Bd: np.ndarray
 
     @staticmethod
-    def discretize(m: Model, dt: float) -> "DiscreteModel":
-        return DiscreteModel(Ad=expm(m.A * dt), Bd=m.B * dt)  # B: first-order approximation
+    def discretize(m, dt):
+        M = np.zeros((NX+NU, NX+NU))
+        M[:NX, :NX] = m.A
+        M[:NX, NX:] = m.B
+        E = expm(M * dt)
+        return DiscreteModel(Ad=E[:NX, :NX], Bd=E[:NX, NX:])
 
 
 # ----------------------------------------------------------------------------
@@ -155,8 +159,8 @@ class MPCConfig:
     mass: float = 12.0
     I_body: np.ndarray = field(default_factory=lambda: np.eye(3))
     mu: float = 0.4
-    f_min: float = 0.0
-    f_max: float = 90.0
+    f_min: float = 5.0
+    f_max: float = 250.0
     # [roll pitch yaw | x y z | wx wy wz | vx vy vz | g]
     Q_diag: np.ndarray = field(default_factory=lambda: np.ones(NX))
     R_weight: float = 1e-4
@@ -202,10 +206,9 @@ class MPC:
         self.U_prev = np.zeros(NU * N)
 
         # W = weight, D = difference
-        W = 1e-2  # tune: 1e-4 .. 1e-2
-        D = np.eye(NU * N) - np.eye(NU * N, k=-NU)   # (DU)_k = u_k - u_{k-1}
-        self.DtWD = W * D.T @ D
-        self.DtW = W * D.T
+        self.W_smooth = 1e-2
+        self.prev_contact = [True]*NUM_LEGS
+        self.D = np.eye(NU * N) - np.eye(NU * N, k=-NU)   # (DU)_k = u_k - u_{k-1}
 
         # OSQP state (one-time setup)
         self._C_sp = sp.csc_matrix(self.C)
@@ -258,15 +261,29 @@ class MPC:
 
     def build_cost(self, p: MPCProblem) -> None:
         err = self._error(p)
-        BtL = self.B_qp.T * self.L_diag  # B' diag(L)
+        Q = np.asarray(self.cfg.Q_diag, float)
+        Qf = Q.copy(); Qf[[5, 11]] = 0.0          # z, vz free in flight
+        L = np.concatenate([Q if any(c) else Qf for c in p.contact])
+        BtL = self.B_qp.T * L
         self.q = 2.0 * BtL @ err
         self.H = 2.0 * BtL @ self.B_qp
         self.H[np.diag_indices_from(self.H)] += 2.0 * self.K_diag
 
         d0 = np.zeros(NU * self.N)
         d0[:NU] = self.U_prev[:NU]           # last applied u0 (zero if that leg was in swing)
-        self.H += 2.0 * self.DtWD
-        self.q -= 2.0 * self.DtW @ d0
+        w = self._smooth_weights(p)
+        DtW = self.D.T * w                     # D' diag(w)
+        self.H += 2.0 * DtW @ self.D
+        self.q -= 2.0 * DtW @ d0
+
+    def _smooth_weights(self, p):
+        w = np.zeros(NU*self.N)
+        for k in range(self.N):
+            for j in range(NUM_LEGS):
+                prev = self.prev_contact[j] if k == 0 else p.contact[k-1][j]
+                if p.contact[k][j] and prev:
+                    w[NU*k+3*j : NU*k+3*j+3] = self.W_smooth
+        return w
 
     # -- 4: lb <= C U <= ub --------------------------------------------------
     def build_constraints(self, p: MPCProblem) -> None:
@@ -321,35 +338,5 @@ class MPC:
         res.u0 = Input.from_vector(self.U_sol[:NU])
         self.U_prev = self.U_sol.copy()
         res.solve_time_ms = (time.perf_counter() - t0) * 1000.0
+        self.prev_contact = list(p.contact[0])
         return res
-
-
-# ----------------------------------------------------------------------------
-# demo: robot standing still on four feet
-# ----------------------------------------------------------------------------
-if __name__ == "__main__":
-    cfg = MPCConfig(horizon=10, dt=0.03, mass=12.0,
-                    I_body=np.diag([0.07, 0.26, 0.242]),
-                    Q_diag=np.array([5, 5, 10, 1, 1, 50, 1, 1, 1, 1, 1, 1, 0.0]))
-    mpc = MPC(cfg)
-
-    x0 = State(pos=np.array([0, 0, 0.3]))
-    x_ref = x0.to_vector()
-    feet = np.array([[0.2, 0.1, -0.3], [0.2, -0.1, -0.3], [-0.2, 0.1, -0.3], [-0.2, -0.1, -0.3]])
-
-    prob = MPCProblem(
-        x0=x0,
-        x_ref=[x_ref.copy() for _ in range(cfg.horizon)],
-        foot_rel_pos=[feet for _ in range(cfg.horizon)],
-        contact=[[True] * NUM_LEGS for _ in range(cfg.horizon)],
-    )
-    r = mpc.solve(prob)
-    print("success:", r.success, f"({r.solve_time_ms:.2f} ms)")
-    print("foot forces:\n", np.round(r.u0.foot_ground_force, 2))
-    print("sum fz:", r.u0.foot_ground_force[:, 2].sum(), "expected ~", 12 * 9.81)
-
-    # trot-like: swing diagonal pair
-    prob.contact = [[True, False, False, True] for _ in range(cfg.horizon)]
-    r = mpc.solve(prob)
-    print("\ntrot stance:", r.success, f"({r.solve_time_ms:.2f} ms)")
-    print(np.round(r.u0.foot_ground_force, 2))

@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from .leg_config import (BODY_COXA_X_MM, FEMUR_LENGTH_MM, TIBIA_LENGTH_MM, Movement, Offset, Theta3, Vec3, c_max, c_min, Gait, GaitTiming, GAIT_WALK_F)
+from .leg_config import (BODY_COXA_X_MM, FEMUR_LENGTH_MM, TIBIA_LENGTH_MM, Offset, Theta3, Vec3, c_max, c_min, Gait, GAIT_WALK_F)
 
 from .movement import IK
 from .limits import ServoConfig
@@ -40,7 +40,7 @@ def _is_right_leg(leg_id: int) -> bool:
 
 
 class Leg:
-    MPC_OFFSET_TAU_S = 0.025  # low-pass time constant of the MPC foot offset
+    MPC_OFFSET_TAU_S = 0.01  # low-pass time constant of the MPC foot offset
 
     def __init__(self, leg_id: int):
         neutral = Offset.neutral_foot_pos_lf[leg_id]
@@ -210,15 +210,17 @@ class Leg:
         target = self.foot_state.swing_target
         foot = self.foot_state.target
 
-        # Smooth interpolation with zero horizontal velocity at both endpoints.
-        s = t * t * (3.0 - 2.0 * t)
 
-        foot.x = start.x + s * (target.x - start.x)
-        foot.y = start.y + s * (target.y - start.y)
+        T = self._gait.timing.swing_s
+        v0 = Vec3(0, 0, 0)                      # or stance_vel at liftoff for continuity
+        v1 = self.stance_vel                    # mm/s, already (-v,...) in leg frame
+        h00 = 2*t**3 - 3*t**2 + 1; h10 = t**3 - 2*t**2 + t
+        h01 = -2*t**3 + 3*t**2;    h11 = t**3 - t**2
+        foot.x = h00*start.x + h10*T*v0.x + h01*target.x + h11*T*v1.x
+        foot.y = h00*start.y + h10*T*v0.y + h01*target.y + h11*T*v1.y
 
         # Parabolic clearance arc: zero at both endpoints, maximum at midpoint.
-        clearance = 4.0 * self._gait.timing.step_height_mm * t * (1.0 - t)
-        foot.z = start.z + t * (target.z - start.z) + clearance
+        foot.z = start.z + self._gait.timing.step_height_mm * pow(math.sin(math.pi * t), 2)
 
         if t >= 1.0:
             self.foot_state.target = target.copy()

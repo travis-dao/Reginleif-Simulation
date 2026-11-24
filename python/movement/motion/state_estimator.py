@@ -145,6 +145,8 @@ class StateEstimator:
         A = np.eye(NS)
         A[0:3, 3:6] = dt * np.eye(3)
         self.x = A @ self.x
+        if self.trust.max() < 0.5:          # no trusted foot: ballistic
+            self.x[5] += c.gravity_z * dt
 
         q_diag = np.zeros(NS)
         q_diag[0:3] = dt * c.process_pos
@@ -204,18 +206,17 @@ class StateEstimator:
     def _foot_rel_body(self) -> np.ndarray:
         return np.asarray(self.cfg.foot_rel_body_fn(), dtype=float).reshape(NL, 3)
 
-    def _update_contact(self, dt: float) -> None:
-        """Crawl gait: exactly one swing leg at a time (-1 = all feet planted)."""
+    def _update_contact(self, dt):
+        sw = self.cfg.swing_leg_fn()
+        sw = {sw} if isinstance(sw, int) else set(sw)
         c = self.cfg
-        swing = int(c.swing_leg_fn())
         for i in range(NL):
-            if i == swing:
+            if i in sw:
                 self.t_stance[i] = 0.0
                 self.trust[i] = 0.0
             else:
                 self.t_stance[i] += dt
-                self.trust[i] = (min(1.0, self.t_stance[i] / c.touchdown_trust_s)
-                                 if c.touchdown_trust_s > 0.0 else 1.0)
+                self.trust[i] = min(1.0, self.t_stance[i] / c.touchdown_trust_s) if c.touchdown_trust_s > 0 else 1.0
 
     def _publish(self, rpy: np.ndarray, R: np.ndarray, gyro: np.ndarray) -> None:
         s = self.state

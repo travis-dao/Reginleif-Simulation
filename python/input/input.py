@@ -37,5 +37,8 @@ class InputController:
     def get_input(self) -> Input:
         return self.input_
 
+    def get_key(self, key: str) -> bool:
+        return self.controls.get_key(key) == 1.0
+
     def stop(self):
         self.controls.stop()

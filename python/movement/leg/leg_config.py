@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Optional
 
 
 '''
@@ -93,14 +93,17 @@ class Movement:
 
 @dataclass(frozen=True)
 class GaitTiming:
-    swing_s: float                    # leg in the air
-    gap_s: float                      # min all-grounded gap (used for STOPPING/IDLE)
-    duty_zheta: float = 4.0           # your "zheta"; larger = more overlap
+    swing_s: float
+    gap_s: float
+    duty_zheta: float = 4.0
     step_length_mm: float = 100.0
     step_height_mm: float = 40.0
+    duty_override: Optional[float] = None
 
     @property
     def duty(self) -> float:
+        if self.duty_override is not None:
+            return self.duty_override
         return 1.0 - self.swing_s / (self.duty_zheta * (self.swing_s + self.gap_s))
 
     @property
@@ -126,6 +129,14 @@ class Gait:
 
 _T, _G = Movement.SWING_DURATION_S, Movement.GAP_DURATION_S
 
+def run_gait(name, period, duty, step_len=100.0, step_h=40.0):
+    t = GaitTiming(swing_s=(1 - duty) * period, gap_s=0.0,
+                   step_length_mm=step_len, step_height_mm=step_h,
+                   duty_override=duty)
+    # order = FL, BR, FR, BL -> pairs (FL,BR) and (FR,BL) are diagonal
+    return Gait(name, Movement.ORDER_WALK_F, t, phase_offsets=(0.0, 0.0, 0.5, 0.5))
+
+GAIT_RUN_F = run_gait("RUN_F", period=0.5, duty=0.5)   # start here, then lower duty
 GAIT_WALK_F = Gait("WALK_F", Movement.ORDER_WALK_F, GaitTiming(_T,       _G,     duty_zheta=3.8))
 GAIT_WALK_B = Gait("WALK_B", Movement.ORDER_WALK_B, GaitTiming(_T * 1.3,       _G * 1.3,     duty_zheta=4.0))
 GAIT_TURN_R = Gait("TURN_R", Movement.ORDER_TURN_R, GaitTiming(_T * 1.5, _G * 4, duty_zheta=4.0))

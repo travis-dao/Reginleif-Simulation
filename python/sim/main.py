@@ -39,11 +39,11 @@ mpc_cfg = MPCConfig(
     R_weight=1e-3,                                 # larger = smoother forces, less chatter
     mu=0.4,                                        # keep <= foot friction in the XML
     # [roll pitch yaw | x y z | wx wy wz | vx vy vz | g]
-    Q_diag=np.array([30, 30, 10, 
-                     1, 1, 10, 
-                     1, 1, 1, 
-                     1, 1, 20, 
-                     0.0]),
+    Q_diag=np.array([50, 80, 10, 
+                     0, 0, 50, 
+                     2, 4, 1, 
+                     20, 5, 5, 
+                     0]),
 )
 mpc = MPC(mpc_cfg)
 lc = LegController(model, data)
@@ -51,7 +51,7 @@ imu = Imu(model, data, "base")
 
 # z_des is latched from the measured standing height once the robot has settled
 core = Core(mpc, lc, z_des_m=0.0, solve_period_s=cfg.MPC_DT,
-            gain_mm_per_n=cfg.MPC_GAIN, gravity_z_mps2=float(model.opt.gravity[2]), ramp_s=0.1)
+            gain_mm_per_n=cfg.MPC_GAIN, max_corr_mm=35, gravity_z_mps2=float(model.opt.gravity[2]), ramp_s=0.1)
 
 # start the estimator at the known spawn pose (the estimate lives in this world frame from here on)
 _jnt = model.body_jntadr[body_id]
@@ -72,6 +72,7 @@ def sim():
 
             input_controller.update(dt)
             command = input_controller.get_input()
+            lc.run_enabled = input_controller.get_key("e")
             # input_visualizer.update(command)
 
             imu.update(dt)
@@ -92,7 +93,8 @@ def sim():
                 vel_est=core.estimator.state.linear_vel[0] * 1e3,
                 yaw_cmd=core.yaw_rate_cmd,
                 yaw_real=lc._w,
-                leg_duty=lc._gait.timing.duty
+                leg_duty=lc._gait.timing.duty,
+                run_enabled=lc.run_enabled
             )
 
             # Engage MPC once the robot has settled.

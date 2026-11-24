@@ -11,7 +11,7 @@ import math
 
 from .leg import Leg
 from .leg_config import (Movement, Offset, Theta3, Vec3,
-                         Gait, GAIT_WALK_F, GAIT_WALK_B, GAIT_TURN_L, GAIT_TURN_R)
+                         Gait, GAIT_WALK_F, GAIT_WALK_B, GAIT_TURN_L, GAIT_TURN_R, GAIT_RUN_F)
 from .movement import LegDriver
 from enum import Enum, auto
 from motion.mpc import State
@@ -54,7 +54,7 @@ class LegController:
 
         self._nom_bf = [leg_to_body_frame(i, Offset.neutral_foot_pos_lf[i]) for i in range(4)]
         self.max_step_y_mm = 100.0            # tune: sideways reach of the coxa
-        self.a_v_mm_s2 = 300.0               # twist slew limits, tune
+        self.a_v_mm_s2 = 600.0               # twist slew limits, tune
         self.a_w_rad_s2 = 0.5
         self._cmd = (0.0, 0.0)               # requested (v mm/s, w rad/s)
         self._v_cmd_xy: Vec3 = Vec3(0.0, 0.0, 0.0)
@@ -70,6 +70,8 @@ class LegController:
         self._state = State()
         self.body_roll = 0.0
         self.body_pitch = 0.0
+
+        self.run_enabled = False
         
         for i in range(4):
             self.legs[i] = Leg(i)
@@ -106,6 +108,8 @@ class LegController:
         v, w = self._cmd
         if abs(v) < self.turn_v_eps and abs(w) > self.turn_w_eps:
             return GAIT_TURN_L if w > 0 else GAIT_TURN_R
+        if v > 0 and self.run_enabled:
+            return GAIT_RUN_F
         return GAIT_WALK_B if v < 0 else GAIT_WALK_F
 
     def _after(self, last: int) -> int:
@@ -123,7 +127,7 @@ class LegController:
             for leg in self.legs:
                 leg.resume_stance()
             gait = self._select_gait()
-            push = self.start_push_s if gait in (GAIT_WALK_F, GAIT_WALK_B) else 0.0
+            push = self.start_push_s if gait in (GAIT_WALK_F, GAIT_WALK_B, GAIT_RUN_F) else 0.0
             if not self._set_gait(gait, push):
                 self._schedule_from(self._after(self._last_swing_leg), push)
 
@@ -145,6 +149,9 @@ class LegController:
 
     def get_swing_leg(self) -> int:
         return self.swing_leg
+
+    def get_swing_legs(self):
+        return [i for i, leg in enumerate(self.legs) if not leg.is_grounded()]
 
     def swing_time_remaining_s(self) -> float:
         if self.swing_leg < 0:
@@ -182,7 +189,7 @@ class LegController:
     def swing_schedule(self, horizon_s: float):
         if self.move_state is MoveState.IDLE:
             return []
-        T, P = Movement.SWING_DURATION_S, self.period_s
+        T, P = self.timing.swing_s, self.period_s
         out = []
         for i, leg in enumerate(self.legs):
             if not leg.is_grounded():

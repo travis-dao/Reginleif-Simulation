@@ -41,7 +41,7 @@ class Core:
         leg_ctrl: LegController,
         z_des_m: float,
         yaw_des: Optional[float] = None,
-        solve_period_s: float = 0.03,
+        solve_period_s: float = 0.02,
         gain_mm_per_n: float = 1.0,
         max_corr_mm: float = 12.0,
         ramp_s: float = 1.0,
@@ -72,7 +72,7 @@ class Core:
         # leg kinematics + the gait's swing leg; orientation / gyro come from the IMU.
         self.estimator = StateEstimator(EstimatorConfig(
             foot_rel_body_fn=self._foot_rel_body_m,
-            swing_leg_fn=self.lc.get_swing_leg,
+            swing_leg_fn=self.lc.get_swing_legs,
             gravity_z=gravity_z_mps2,
         ))
         self.state: State = self.estimator.state
@@ -121,7 +121,7 @@ class Core:
         self.last_result = res
         if res.success:  # on failure keep the last good offsets
             # Convert forces to foot position corrections
-            self._offsets = self._to_offsets(res.u0.foot_ground_force, contact[0], s0.yaw)
+            self._offsets = self._to_offsets(s0, res.u0.foot_ground_force, contact[0], s0.yaw)
             # print(self._offsets)
         self.lc.apply_mpc_corrections(self._offsets)
         return res
@@ -189,13 +189,13 @@ class Core:
             out.append(r)
         return out
 
-    def _to_offsets(self, forces: np.ndarray, contact0, yaw: float) -> List[Vec3]:
+    def _to_offsets(self, s0: State, forces: np.ndarray, contact0, yaw: float) -> List[Vec3]:
         """MPC forces -> leg-frame foot offsets (mm).
         The kinematic standing pose already carries the static load, so only the
         deviation from an even weight share is turned into an offset."""
         cfg = self.mpc.cfg
         n_st = max(sum(contact0), 1)
-        share = cfg.mass * 9.81 / n_st
+        share = cfg.mass * -s0.g / n_st
         fw = []
         for i in range(NUM_LEGS):
             if contact0[i]:
