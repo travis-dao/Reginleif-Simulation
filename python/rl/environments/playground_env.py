@@ -32,7 +32,7 @@ from mujoco_playground._src import mjx_env
 PYTHON_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PYTHON_DIR))
 
-from rl.config import CFG, OBS, NUM_JOINTS, Q_DEFAULT_PATH
+from rl.config import CFG, OBS, NUM_JOINTS, Q_DEFAULT_PATH, load_baseline_cmds
 from rl.obs import build_obs, roll_history
 from sim.util.mujoco_robot_map import MuJuCoMap
 import sim.config as cfg
@@ -51,6 +51,7 @@ def _load_mj_model() -> mujoco.MjModel:
 
 def default_config(cfg_dict: dict | None = None) -> config_dict.ConfigDict:
     c = config_dict.ConfigDict(copy.deepcopy((cfg_dict or CFG)["env"]))
+    c.cmd_bank = load_baseline_cmds(cfg_dict or CFG).tolist()      # MPC's own commands, sampled with prob env.cmd_bank_prob
     c.ctrl_dt = 1.0 / OBS.policy_hz
     c.sim_dt = float(_load_mj_model().opt.timestep)
     return c
@@ -87,6 +88,9 @@ class QuadrupedEnv(mjx_env.MjxEnv):
         self._dr = bool(c.dr.enabled)
         self._lat_max = int(c.dr.latency_steps_max)
         self._resample = float(c.cmd_resample_s[1]) > 0
+        bank = np.asarray(c.get("cmd_bank", []), np.float32).reshape(-1, 3)
+        self._bank = jnp.asarray(bank)
+        self._bank_p = float(c.get("cmd_bank_prob", 0.0)) if len(bank) else 0.0
 
         # feet: bodies, colliding geoms (for contact detection), friction table (for friction DR)
         self._foot_bodies = np.asarray(mp.foot_bodies)
@@ -147,11 +151,15 @@ class QuadrupedEnv(mjx_env.MjxEnv):
         return {"policy": policy, "privileged": priv}
 
     def _sample_cmd(self, key):
-        k1, k2, k3, k4 = jax.random.split(key, 4)
+        k1, k2, k3, k4, k5, k6 = jax.random.split(key, 6)
         c = self._config
         vx, vy, w = _u(k1, c.cmd_vx_range), _u(k2, c.cmd_vy_range), _u(k3, c.cmd_yaw_range)
         stand = jax.random.uniform(k4) < c.stand_prob
-        return jnp.where(stand, 0.0, jnp.stack([vx, vy, w])).astype(jnp.float32)
+        uniform_cmd = jnp.where(stand, 0.0, jnp.stack([vx, vy, w]))
+        if self._bank_p > 0:                         # with prob cmd_bank_prob: one of the MPC's own commands
+            pick = self._bank[jax.random.randint(k5, (), 0, self._bank.shape[0])]
+            uniform_cmd = jnp.where(jax.random.uniform(k6) < self._bank_p, pick, uniform_cmd)
+        return uniform_cmd.astype(jnp.float32)
 
     def _sample_period(self, key):
         if not self._resample:

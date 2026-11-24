@@ -17,6 +17,14 @@ obs:
 #   gyro(3) | gravity in body frame(3) | cmd [v_x m/s, v_y m/s, yaw_rate rad/s](3) | q - q_default(12) | qd(12) | past actions (N*12, oldest -> newest)
 #   v_y is always 0 in the MPC data (the MPC has no lateral command); it becomes active in the RL stage.
 
+# The MPC's own commands = the distinct `cmd` values stored in these (relabeled) datasets. They drive
+#   (a) env.cmd_bank_prob: part of the training commands are drawn from this set
+#   (b) bc_reg: only states whose command is near one of these are pulled toward the BC baseline
+# Paths are relative to the repo root.
+baseline_cmds:
+  dirs: [python/rl/data/mpc_relabeled, python/rl/data/mpc_train_relabeled]
+  decimals: 4
+
 actor:
   hidden_dims: [512, 256, 128]   # number of layers = len(hidden_dims)
   activation: elu                # elu | relu | tanh | selu | lrelu
@@ -64,7 +72,8 @@ env:
   cmd_vx_range: [-0.08333, 0.08333]    # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
   cmd_vy_range: [0.0, 0.0]       # m/s, lateral: 0 until the lateral curriculum stage (the MPC cannot do it)
   cmd_yaw_range: [-0.5, 0.5]     # rad/s
-  stand_prob: 0.1                # probability that a freshly sampled command is "stand still"
+  cmd_bank_prob: 0.5             # probability that a sampled command is one of the MPC's own (baseline_cmds); else uniform
+  stand_prob: 0.1                # probability that a freshly sampled UNIFORM command is "stand still"
   cmd_resample_s: [1.0, 3.0]     # new command every U(lo, hi) seconds; [0, 0] disables mid-episode changes
   cmd_p_brake: 0.15              # at a command change: go to zero (braking)
   cmd_p_flip: 0.15               # at a command change: reverse the current command (direction change)
@@ -98,16 +107,17 @@ env:
     joint_limit: -1.0
     termination: -10.0
 
-# Keeps the PPO actor close to the frozen BC baseline on baseline-like commands (see rl/bc_reg.py).
+# Keeps the PPO actor close to the frozen BC baseline, ONLY on states whose command the MPC actually executes
+# (see baseline_cmds and rl/bc_reg.py). Elsewhere PPO is free.
 bc_reg:
   enabled: true
-  coef: 1.0
+  coef: 1.0                      # NOTE: Adam is scale-invariant, so this has almost no effect; lr and steps_per_iter set the strength
   lr: 1.0e-4
-  steps_per_iter: 10              # supervised steps after every PPO update
+  steps_per_iter: 10             # supervised steps after every PPO update
   batch_size: 4096
-  baseline_vx_abs_max: 0.1
-  baseline_yaw_abs_max: 0.5
-  anneal_iters: 0                # >0: linearly fade the coefficient to 0 over this many iterations
+  tol_v: 0.005                   # m/s   a command counts as "baseline" if within these tolerances of an MPC command
+  tol_yaw: 0.02                  # rad/s
+  anneal_iters: 600              # linearly fade the regulariser to 0 over this many iterations (0 = never fade)
 
 eval:
   cmds: [[0.0, 0.0, 0.0], [0.08, 0.0, 0.0], [-0.08, 0.0, 0.0], [0.0, 0.0, 0.3], [0.08, 0.0, 0.3]]   # [vx, vy, yaw]; only used when eval.py has no --manifest

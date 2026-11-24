@@ -14,7 +14,8 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
-from rl.config import OBS, NUM_JOINTS
+from rl.config import OBS, NUM_JOINTS, load_baseline_cmds
+from rl.obs import near_baseline_cmds
 from rl.models import actor_mean, make_mlp
 
 
@@ -42,11 +43,14 @@ class BCRegularizer:
 
         runner.alg.update = update_with_reg
         c = self.cfg
-        # baseline-command mask in scaled-obs units: cmd columns are 6 (vx), 7 (vy), 8 (yaw)
-        self.vx_max = c["baseline_vx_abs_max"] * OBS.cmd_scale_lin
-        self.yaw_max = c["baseline_yaw_abs_max"] * OBS.cmd_scale_ang
-        print(f"[bc_reg] enabled: coef={c['coef']} lr={c['lr']} steps/iter={c['steps_per_iter']} "
-              f"baseline |vx|<={c['baseline_vx_abs_max']} |yaw|<={c['baseline_yaw_abs_max']} vy==0")
+        bank = load_baseline_cmds(cfg)
+        if len(bank) == 0:
+            raise RuntimeError("bc_reg needs the MPC's command set: check baseline_cmds.dirs in model.yaml "
+                               "(directories with the relabeled .npz files) or set bc_reg.enabled=false")
+        self.bank = torch.as_tensor(bank, device=self.device)
+        self.tol = torch.tensor([c["tol_v"], c["tol_v"], c["tol_yaw"]], device=self.device)
+        print(f"[bc_reg] enabled: coef={c['coef']} lr={c['lr']} steps/iter={c['steps_per_iter']}; regularising states whose command is within "
+              f"(+-{c['tol_v']} m/s, +-{c['tol_yaw']} rad/s) of one of {len(bank)} MPC commands")
 
     def _check_actor_forward(self, runner):
         """Fail loudly if our functional forward disagrees with rsl_rl's actor (wrong layer order / normalisation)."""
@@ -69,8 +73,9 @@ class BCRegularizer:
             return
         obs = torch.cat(self.env.obs_log)
         self.env.obs_log.clear()
-        vx, vy, yaw = obs[:, 6], obs[:, 7], obs[:, 8]
-        obs = obs[(vy.abs() < 1e-6) & (vx.abs() <= self.vx_max) & (yaw.abs() <= self.yaw_max)]
+        n_all = len(obs)
+        cmd = torch.stack([obs[:, 6] / OBS.cmd_scale_lin, obs[:, 7] / OBS.cmd_scale_lin, obs[:, 8] / OBS.cmd_scale_ang], dim=1)
+        obs = obs[near_baseline_cmds(cmd, self.bank, self.tol)]          # only states whose command the MPC actually does
         coef = self._coef()
         if len(obs) == 0 or coef <= 0:
             return
@@ -84,4 +89,5 @@ class BCRegularizer:
             loss.backward()
             self.opt.step()
         if self.it % 50 == 0:
-            print(f"[bc_reg] iter {self.it}: loss {float(loss):.5f}  baseline-like states {len(obs)}  coef {coef:.3f}")
+            mse = loss.item() / coef                      # plain MSE vs the frozen baseline (action units, rad)
+            print(f"[bc_reg] iter {self.it}: mse {mse:.5f} (rms {mse ** 0.5:.4f} rad)  baseline-command states {len(obs)}/{n_all}  coef {coef:.3f}")

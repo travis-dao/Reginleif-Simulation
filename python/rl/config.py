@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import copy
+import functools
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import yaml
 
 RL_DIR = Path(__file__).resolve().parent
+REPO_ROOT = RL_DIR.parents[1]          # relative data paths in model.yaml are resolved from here
 CONFIG_PATH = RL_DIR / "configs" / "model.yaml"
 Q_DEFAULT_PATH = RL_DIR / "data" / "q_default.npy"
 NUM_JOINTS = 12
@@ -65,6 +68,29 @@ class ObsSpec:
     @property
     def hist_start(self) -> int:       # first obs column of the action history
         return 3 + 3 + 3 + NUM_JOINTS + NUM_JOINTS
+
+
+@functools.lru_cache(maxsize=None)
+def _baseline_cmds(dirs: tuple, decimals: int) -> np.ndarray:
+    seen = set()
+    for d in dirs:
+        p = Path(d) if Path(d).is_absolute() else REPO_ROOT / d
+        files = sorted(p.glob("*.npz"))
+        if not files:
+            print(f"[baseline_cmds] WARNING: no .npz files in {p}")
+        for f in files:
+            with np.load(f) as z:                         # lazy: only the small `cmd` array is read
+                seen.add(tuple(np.round(z["cmd"].astype(np.float64), decimals).tolist()))
+    bank = np.asarray(sorted(seen), np.float32).reshape(-1, 3)
+    print(f"[baseline_cmds] {len(bank)} distinct MPC commands from {len(dirs)} dir(s)")
+    return bank
+
+
+def load_baseline_cmds(cfg: dict | None = None) -> np.ndarray:
+    """The distinct [vx, vy, yaw] commands the MPC actually executed (read from the dataset's `cmd` fields).
+    Used (a) as a command bank for the env and (b) to decide which states bc_reg regularises. Shape (K, 3)."""
+    spec = (cfg or CFG).get("baseline_cmds") or {}
+    return _baseline_cmds(tuple(spec.get("dirs", [])), int(spec.get("decimals", 4)))
 
 
 CFG = load_config()

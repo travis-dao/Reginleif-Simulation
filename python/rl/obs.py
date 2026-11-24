@@ -25,3 +25,9 @@ def roll_history(xp, hist, act):
     if hist.shape[-2] == 0:
         return hist
     return xp.concatenate([hist[..., 1:, :], act[..., None, :]], axis=-2)
+
+
+def near_baseline_cmds(cmd, bank, tol):
+    """cmd (N,3), bank (K,3), tol (3,) -> bool (N,): True where the command is within `tol` (per component) of ANY bank
+    command. Works with numpy arrays and torch tensors."""
+    return (abs(cmd[:, None, :] - bank[None]) <= tol).all(-1).any(-1)

@@ -73,7 +73,7 @@ def run(sim, policy, cmd, seconds, view):
     down = np.array([0.0, 0.0, -1.0])
     viewer = None
     if view:
-        from mujoco import viewer as mj_viewer
+        from mujoco import viewer as viewer
         viewer = viewer.launch_passive(m, d)
 
     vb, wz, zs, td, travel = [], [], [], 0, 0.0
