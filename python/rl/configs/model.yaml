@@ -105,7 +105,7 @@ bc_reg:
   lr: 1.0e-4
   steps_per_iter: 10              # supervised steps after every PPO update
   batch_size: 4096
-  baseline_vx_abs_max: 0.10
+  baseline_vx_abs_max: 0.1
   baseline_yaw_abs_max: 0.5
   anneal_iters: 0                # >0: linearly fade the coefficient to 0 over this many iterations
 

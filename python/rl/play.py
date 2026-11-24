@@ -2,7 +2,7 @@
 #
 #   mjpython python/rl/play.py --ckpt python/rl/data/bc_actor.pt logs/rsl_rl/<exp>/<run>/model_99.pt \
 #            --cmd 0.08333 0 0 --view
-#   mjpython python/rl/play.py --ckpt python/rl/data/bc_actor_v2.pt logs/rsl_rl/quadruped_bc_ppo/2026-11-23_08-28-51/model_50.pt --cmd 0.08333 0 0 --view
+#   mjpython python/rl/play.py --ckpt python/rl/data/bc_actor.pt logs/rsl_rl/stage_1/model_100.pt --cmd 0.08333 0 0 --view
 #
 # --view opens a viewer per checkpoint, in order (close the window to continue; needs mjpython on macOS).
 # Without --view it runs headless and only prints the numbers, so BC and PPO can be compared side by side.
@@ -73,8 +73,8 @@ def run(sim, policy, cmd, seconds, view):
     down = np.array([0.0, 0.0, -1.0])
     viewer = None
     if view:
-        import mujoco.viewer
-        viewer = mujoco.viewer.launch_passive(m, d)
+        from mujoco import viewer as mj_viewer
+        viewer = viewer.launch_passive(m, d)
 
     vb, wz, zs, td, travel = [], [], [], 0, 0.0
     prev_c, prev_q, alive, t_alive = sim.contacts(d), d.qpos[mp.q_adr].copy(), True, 0.0

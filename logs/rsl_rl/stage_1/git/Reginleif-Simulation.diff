@@ -1,0 +1,56 @@
+--- git commit ---
+a9e4e3bb03e865307c70fface48e5ea3a4280a0a
+
+
+--- git status ---
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   python/rl/configs/model.yaml
+	modified:   python/rl/train.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	logs/
+
+no changes added to commit (use "git add" and/or "git commit -a") 
+
+
+--- git diff ---
+diff --git a/python/rl/configs/model.yaml b/python/rl/configs/model.yaml
+index 9bac519..9927fdc 100644
+--- a/python/rl/configs/model.yaml
++++ b/python/rl/configs/model.yaml
+@@ -105,7 +105,7 @@ bc_reg:
+   lr: 1.0e-4
+   steps_per_iter: 10              # supervised steps after every PPO update
+   batch_size: 4096
+-  baseline_vx_abs_max: 0.10
++  baseline_vx_abs_max: 0.1
+   baseline_yaw_abs_max: 0.5
+   anneal_iters: 0                # >0: linearly fade the coefficient to 0 over this many iterations
+ 
+diff --git a/python/rl/train.py b/python/rl/train.py
+index 6ec1a8e..5d78c3d 100644
+--- a/python/rl/train.py
++++ b/python/rl/train.py
+@@ -44,6 +44,7 @@ def main():
+     ap.add_argument("--set", nargs="*", default=[], metavar="KEY=VAL", help="config overrides, e.g. env.cmd_vy_range=[-0.1,0.1]")
+     ap.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
+     ap.add_argument("--config", default=str(CONFIG_PATH))
++    ap.add_argument("--out")
+     args = ap.parse_args()
+ 
+     cfg = load_config(args.config, args.set)
+@@ -51,7 +52,7 @@ def main():
+     env = PlaygroundVecEnv(QuadrupedEnv(default_config(cfg)), args.num_envs, seed=train_cfg["seed"], device=args.device)
+ 
+     # log_dir = Path("logs/rsl_rl") / train_cfg["experiment_name"] / datetime.now().strftime("%Y-%m-%d_%H")
+-    log_dir = Path("logs/rsl_rl") / datetime.now().strftime("%Y-%m-%d_%H")
++    log_dir = Path("logs/rsl_rl") / args.out
+     log_dir.mkdir(parents=True, exist_ok=True)
+     shutil.copy(args.config, log_dir / "model.yaml")
+     (log_dir / "overrides.yaml").write_text(yaml.safe_dump({"set": args.set, "resume": args.resume, "bc_ckpt": args.bc_ckpt}))

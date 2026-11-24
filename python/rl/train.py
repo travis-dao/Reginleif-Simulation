@@ -44,6 +44,7 @@ def main():
     ap.add_argument("--set", nargs="*", default=[], metavar="KEY=VAL", help="config overrides, e.g. env.cmd_vy_range=[-0.1,0.1]")
     ap.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--config", default=str(CONFIG_PATH))
+    ap.add_argument("--out")
     args = ap.parse_args()
 
     cfg = load_config(args.config, args.set)
@@ -51,7 +52,7 @@ def main():
     env = PlaygroundVecEnv(QuadrupedEnv(default_config(cfg)), args.num_envs, seed=train_cfg["seed"], device=args.device)
 
     # log_dir = Path("logs/rsl_rl") / train_cfg["experiment_name"] / datetime.now().strftime("%Y-%m-%d_%H")
-    log_dir = Path("logs/rsl_rl") / datetime.now().strftime("%Y-%m-%d_%H")
+    log_dir = Path("logs/rsl_rl") / args.out
     log_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy(args.config, log_dir / "model.yaml")
     (log_dir / "overrides.yaml").write_text(yaml.safe_dump({"set": args.set, "resume": args.resume, "bc_ckpt": args.bc_ckpt}))
