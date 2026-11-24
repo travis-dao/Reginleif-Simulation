@@ -1,0 +1,581 @@
+--- git commit ---
+a1a7c171d984c5dc9f21baa7982b6ff953c42be0
+
+
+--- git status ---
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	deleted:    logs/rsl_rl/stage_1/events.out.tfevents.1795490859.Mac.lan.42426.0
+	deleted:    logs/rsl_rl/stage_1/git/Reginleif-Simulation.diff
+	deleted:    logs/rsl_rl/stage_1/model.yaml
+	deleted:    logs/rsl_rl/stage_1/model_0.pt
+	deleted:    logs/rsl_rl/stage_1/model_100.pt
+	deleted:    logs/rsl_rl/stage_1/model_50.pt
+	deleted:    logs/rsl_rl/stage_1/overrides.yaml
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	logs/rsl_rl/stage_1/1/
+	logs/rsl_rl/stage_1/2/
+
+no changes added to commit (use "git add" and/or "git commit -a") 
+
+
+--- git diff ---
+diff --git a/logs/rsl_rl/stage_1/events.out.tfevents.1795490859.Mac.lan.42426.0 b/logs/rsl_rl/stage_1/events.out.tfevents.1795490859.Mac.lan.42426.0
+deleted file mode 100644
+index fe5b82d..0000000
+Binary files a/logs/rsl_rl/stage_1/events.out.tfevents.1795490859.Mac.lan.42426.0 and /dev/null differ
+diff --git a/logs/rsl_rl/stage_1/git/Reginleif-Simulation.diff b/logs/rsl_rl/stage_1/git/Reginleif-Simulation.diff
+deleted file mode 100644
+index 1eeaef8..0000000
+--- a/logs/rsl_rl/stage_1/git/Reginleif-Simulation.diff
++++ /dev/null
+@@ -1,387 +0,0 @@
+---- git commit ---
+-3b1a25cd811cf21bd159532a6ba668c5dc6744cb
+-
+-
+---- git status ---
+-On branch main
+-Your branch is up to date with 'origin/main'.
+-
+-Changes not staged for commit:
+-  (use "git add/rm <file>..." to update what will be committed)
+-  (use "git restore <file>..." to discard changes in working directory)
+-	deleted:    logs/rsl_rl/stage_1/events.out.tfevents.1795476461.Traviss-MacBook-Air-3.local.99667.0
+-	modified:   logs/rsl_rl/stage_1/git/Reginleif-Simulation.diff
+-	modified:   logs/rsl_rl/stage_1/model.yaml
+-	deleted:    logs/rsl_rl/stage_1/model_0.pt
+-	deleted:    logs/rsl_rl/stage_1/model_100.pt
+-	deleted:    logs/rsl_rl/stage_1/model_50.pt
+-	modified:   python/rl/bc_reg.py
+-	modified:   python/rl/config.py
+-	modified:   python/rl/configs/model.yaml
+-	modified:   python/rl/environments/playground_env.py
+-	modified:   python/rl/obs.py
+-
+-Untracked files:
+-  (use "git add <file>..." to include in what will be committed)
+-	logs/rsl_rl/stage_1/events.out.tfevents.1795490859.Mac.lan.42426.0
+-
+-no changes added to commit (use "git add" and/or "git commit -a") 
+-
+-
+---- git diff ---
+-diff --git a/logs/rsl_rl/stage_1/events.out.tfevents.1795476461.Traviss-MacBook-Air-3.local.99667.0 b/logs/rsl_rl/stage_1/events.out.tfevents.1795476461.Traviss-MacBook-Air-3.local.99667.0
+-deleted file mode 100644
+-index 62142d0..0000000
+-Binary files a/logs/rsl_rl/stage_1/events.out.tfevents.1795476461.Traviss-MacBook-Air-3.local.99667.0 and /dev/null differ
+-diff --git a/logs/rsl_rl/stage_1/git/Reginleif-Simulation.diff b/logs/rsl_rl/stage_1/git/Reginleif-Simulation.diff
+-index 6107e04..e69de29 100644
+---- a/logs/rsl_rl/stage_1/git/Reginleif-Simulation.diff
+-+++ b/logs/rsl_rl/stage_1/git/Reginleif-Simulation.diff
+-@@ -1,56 +0,0 @@
+----- git commit ---
+--a9e4e3bb03e865307c70fface48e5ea3a4280a0a
+--
+--
+----- git status ---
+--On branch main
+--Your branch is up to date with 'origin/main'.
+--
+--Changes not staged for commit:
+--  (use "git add <file>..." to update what will be committed)
+--  (use "git restore <file>..." to discard changes in working directory)
+--	modified:   python/rl/configs/model.yaml
+--	modified:   python/rl/train.py
+--
+--Untracked files:
+--  (use "git add <file>..." to include in what will be committed)
+--	logs/
+--
+--no changes added to commit (use "git add" and/or "git commit -a") 
+--
+--
+----- git diff ---
+--diff --git a/python/rl/configs/model.yaml b/python/rl/configs/model.yaml
+--index 9bac519..9927fdc 100644
+----- a/python/rl/configs/model.yaml
+--+++ b/python/rl/configs/model.yaml
+--@@ -105,7 +105,7 @@ bc_reg:
+--   lr: 1.0e-4
+--   steps_per_iter: 10              # supervised steps after every PPO update
+--   batch_size: 4096
+---  baseline_vx_abs_max: 0.10
+--+  baseline_vx_abs_max: 0.1
+--   baseline_yaw_abs_max: 0.5
+--   anneal_iters: 0                # >0: linearly fade the coefficient to 0 over this many iterations
+-- 
+--diff --git a/python/rl/train.py b/python/rl/train.py
+--index 6ec1a8e..5d78c3d 100644
+----- a/python/rl/train.py
+--+++ b/python/rl/train.py
+--@@ -44,6 +44,7 @@ def main():
+--     ap.add_argument("--set", nargs="*", default=[], metavar="KEY=VAL", help="config overrides, e.g. env.cmd_vy_range=[-0.1,0.1]")
+--     ap.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
+--     ap.add_argument("--config", default=str(CONFIG_PATH))
+--+    ap.add_argument("--out")
+--     args = ap.parse_args()
+-- 
+--     cfg = load_config(args.config, args.set)
+--@@ -51,7 +52,7 @@ def main():
+--     env = PlaygroundVecEnv(QuadrupedEnv(default_config(cfg)), args.num_envs, seed=train_cfg["seed"], device=args.device)
+-- 
+--     # log_dir = Path("logs/rsl_rl") / train_cfg["experiment_name"] / datetime.now().strftime("%Y-%m-%d_%H")
+---    log_dir = Path("logs/rsl_rl") / datetime.now().strftime("%Y-%m-%d_%H")
+--+    log_dir = Path("logs/rsl_rl") / args.out
+--     log_dir.mkdir(parents=True, exist_ok=True)
+--     shutil.copy(args.config, log_dir / "model.yaml")
+--     (log_dir / "overrides.yaml").write_text(yaml.safe_dump({"set": args.set, "resume": args.resume, "bc_ckpt": args.bc_ckpt}))
+-\ No newline at end of file
+-diff --git a/logs/rsl_rl/stage_1/model.yaml b/logs/rsl_rl/stage_1/model.yaml
+-index 9927fdc..e25eae6 100644
+---- a/logs/rsl_rl/stage_1/model.yaml
+-+++ b/logs/rsl_rl/stage_1/model.yaml
+-@@ -17,6 +17,14 @@ obs:
+- #   gyro(3) | gravity in body frame(3) | cmd [v_x m/s, v_y m/s, yaw_rate rad/s](3) | q - q_default(12) | qd(12) | past actions (N*12, oldest -> newest)
+- #   v_y is always 0 in the MPC data (the MPC has no lateral command); it becomes active in the RL stage.
+- 
+-+# The MPC's own commands = the distinct `cmd` values stored in these (relabeled) datasets. They drive
+-+#   (a) env.cmd_bank_prob: part of the training commands are drawn from this set
+-+#   (b) bc_reg: only states whose command is near one of these are pulled toward the BC baseline
+-+# Paths are relative to the repo root.
+-+baseline_cmds:
+-+  dirs: [python/rl/data/mpc_relabeled, python/rl/data/mpc_train_relabeled]
+-+  decimals: 4
+-+
+- actor:
+-   hidden_dims: [512, 256, 128]   # number of layers = len(hidden_dims)
+-   activation: elu                # elu | relu | tanh | selu | lrelu
+-@@ -64,7 +72,8 @@ env:
+-   cmd_vx_range: [-0.08333, 0.08333]    # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
+-   cmd_vy_range: [0.0, 0.0]       # m/s, lateral: 0 until the lateral curriculum stage (the MPC cannot do it)
+-   cmd_yaw_range: [-0.5, 0.5]     # rad/s
+--  stand_prob: 0.1                # probability that a freshly sampled command is "stand still"
+-+  cmd_bank_prob: 0.5             # probability that a sampled command is one of the MPC's own (baseline_cmds); else uniform
+-+  stand_prob: 0.1                # probability that a freshly sampled UNIFORM command is "stand still"
+-   cmd_resample_s: [1.0, 3.0]     # new command every U(lo, hi) seconds; [0, 0] disables mid-episode changes
+-   cmd_p_brake: 0.15              # at a command change: go to zero (braking)
+-   cmd_p_flip: 0.15               # at a command change: reverse the current command (direction change)
+-@@ -98,16 +107,17 @@ env:
+-     joint_limit: -1.0
+-     termination: -10.0
+- 
+--# Keeps the PPO actor close to the frozen BC baseline on baseline-like commands (see rl/bc_reg.py).
+-+# Keeps the PPO actor close to the frozen BC baseline, ONLY on states whose command the MPC actually executes
+-+# (see baseline_cmds and rl/bc_reg.py). Elsewhere PPO is free.
+- bc_reg:
+-   enabled: true
+--  coef: 1.0
+-+  coef: 1.0                      # NOTE: Adam is scale-invariant, so this has almost no effect; lr and steps_per_iter set the strength
+-   lr: 1.0e-4
+--  steps_per_iter: 10              # supervised steps after every PPO update
+-+  steps_per_iter: 10             # supervised steps after every PPO update
+-   batch_size: 4096
+--  baseline_vx_abs_max: 0.1
+--  baseline_yaw_abs_max: 0.5
+--  anneal_iters: 0                # >0: linearly fade the coefficient to 0 over this many iterations
+-+  tol_v: 0.005                   # m/s   a command counts as "baseline" if within these tolerances of an MPC command
+-+  tol_yaw: 0.02                  # rad/s
+-+  anneal_iters: 600              # linearly fade the regulariser to 0 over this many iterations (0 = never fade)
+- 
+- eval:
+-   cmds: [[0.0, 0.0, 0.0], [0.08, 0.0, 0.0], [-0.08, 0.0, 0.0], [0.0, 0.0, 0.3], [0.08, 0.0, 0.3]]   # [vx, vy, yaw]; only used when eval.py has no --manifest
+-diff --git a/logs/rsl_rl/stage_1/model_0.pt b/logs/rsl_rl/stage_1/model_0.pt
+-deleted file mode 100644
+-index bd7e11d..0000000
+-Binary files a/logs/rsl_rl/stage_1/model_0.pt and /dev/null differ
+-diff --git a/logs/rsl_rl/stage_1/model_100.pt b/logs/rsl_rl/stage_1/model_100.pt
+-deleted file mode 100644
+-index af98516..0000000
+-Binary files a/logs/rsl_rl/stage_1/model_100.pt and /dev/null differ
+-diff --git a/logs/rsl_rl/stage_1/model_50.pt b/logs/rsl_rl/stage_1/model_50.pt
+-deleted file mode 100644
+-index 48ae8b4..0000000
+-Binary files a/logs/rsl_rl/stage_1/model_50.pt and /dev/null differ
+-diff --git a/python/rl/bc_reg.py b/python/rl/bc_reg.py
+-index b9565b1..0b00a1e 100644
+---- a/python/rl/bc_reg.py
+-+++ b/python/rl/bc_reg.py
+-@@ -14,7 +14,8 @@ from __future__ import annotations
+- import torch
+- import torch.nn as nn
+- 
+--from rl.config import OBS, NUM_JOINTS
+-+from rl.config import OBS, NUM_JOINTS, load_baseline_cmds
+-+from rl.obs import near_baseline_cmds
+- from rl.models import actor_mean, make_mlp
+- 
+- 
+-@@ -42,11 +43,14 @@ class BCRegularizer:
+- 
+-         runner.alg.update = update_with_reg
+-         c = self.cfg
+--        # baseline-command mask in scaled-obs units: cmd columns are 6 (vx), 7 (vy), 8 (yaw)
+--        self.vx_max = c["baseline_vx_abs_max"] * OBS.cmd_scale_lin
+--        self.yaw_max = c["baseline_yaw_abs_max"] * OBS.cmd_scale_ang
+--        print(f"[bc_reg] enabled: coef={c['coef']} lr={c['lr']} steps/iter={c['steps_per_iter']} "
+--              f"baseline |vx|<={c['baseline_vx_abs_max']} |yaw|<={c['baseline_yaw_abs_max']} vy==0")
+-+        bank = load_baseline_cmds(cfg)
+-+        if len(bank) == 0:
+-+            raise RuntimeError("bc_reg needs the MPC's command set: check baseline_cmds.dirs in model.yaml "
+-+                               "(directories with the relabeled .npz files) or set bc_reg.enabled=false")
+-+        self.bank = torch.as_tensor(bank, device=self.device)
+-+        self.tol = torch.tensor([c["tol_v"], c["tol_v"], c["tol_yaw"]], device=self.device)
+-+        print(f"[bc_reg] enabled: coef={c['coef']} lr={c['lr']} steps/iter={c['steps_per_iter']}; regularising states whose command is within "
+-+              f"(+-{c['tol_v']} m/s, +-{c['tol_yaw']} rad/s) of one of {len(bank)} MPC commands")
+- 
+-     def _check_actor_forward(self, runner):
+-         """Fail loudly if our functional forward disagrees with rsl_rl's actor (wrong layer order / normalisation)."""
+-@@ -69,8 +73,9 @@ class BCRegularizer:
+-             return
+-         obs = torch.cat(self.env.obs_log)
+-         self.env.obs_log.clear()
+--        vx, vy, yaw = obs[:, 6], obs[:, 7], obs[:, 8]
+--        obs = obs[(vy.abs() < 1e-6) & (vx.abs() <= self.vx_max) & (yaw.abs() <= self.yaw_max)]
+-+        n_all = len(obs)
+-+        cmd = torch.stack([obs[:, 6] / OBS.cmd_scale_lin, obs[:, 7] / OBS.cmd_scale_lin, obs[:, 8] / OBS.cmd_scale_ang], dim=1)
+-+        obs = obs[near_baseline_cmds(cmd, self.bank, self.tol)]          # only states whose command the MPC actually does
+-         coef = self._coef()
+-         if len(obs) == 0 or coef <= 0:
+-             return
+-@@ -84,4 +89,5 @@ class BCRegularizer:
+-             loss.backward()
+-             self.opt.step()
+-         if self.it % 50 == 0:
+--            print(f"[bc_reg] iter {self.it}: loss {float(loss):.5f}  baseline-like states {len(obs)}  coef {coef:.3f}")
+-\ No newline at end of file
+-+            mse = loss.item() / coef                      # plain MSE vs the frozen baseline (action units, rad)
+-+            print(f"[bc_reg] iter {self.it}: mse {mse:.5f} (rms {mse ** 0.5:.4f} rad)  baseline-command states {len(obs)}/{n_all}  coef {coef:.3f}")
+-\ No newline at end of file
+-diff --git a/python/rl/config.py b/python/rl/config.py
+-index f354d51..a7f5f2a 100644
+---- a/python/rl/config.py
+-+++ b/python/rl/config.py
+-@@ -2,12 +2,15 @@
+- from __future__ import annotations
+- 
+- import copy
+-+import functools
+- from dataclasses import dataclass
+- from pathlib import Path
+- 
+-+import numpy as np
+- import yaml
+- 
+- RL_DIR = Path(__file__).resolve().parent
+-+REPO_ROOT = RL_DIR.parents[1]          # relative data paths in model.yaml are resolved from here
+- CONFIG_PATH = RL_DIR / "configs" / "model.yaml"
+- Q_DEFAULT_PATH = RL_DIR / "data" / "q_default.npy"
+- NUM_JOINTS = 12
+-@@ -67,6 +70,29 @@ class ObsSpec:
+-         return 3 + 3 + 3 + NUM_JOINTS + NUM_JOINTS
+- 
+- 
+-+@functools.lru_cache(maxsize=None)
+-+def _baseline_cmds(dirs: tuple, decimals: int) -> np.ndarray:
+-+    seen = set()
+-+    for d in dirs:
+-+        p = Path(d) if Path(d).is_absolute() else REPO_ROOT / d
+-+        files = sorted(p.glob("*.npz"))
+-+        if not files:
+-+            print(f"[baseline_cmds] WARNING: no .npz files in {p}")
+-+        for f in files:
+-+            with np.load(f) as z:                         # lazy: only the small `cmd` array is read
+-+                seen.add(tuple(np.round(z["cmd"].astype(np.float64), decimals).tolist()))
+-+    bank = np.asarray(sorted(seen), np.float32).reshape(-1, 3)
+-+    print(f"[baseline_cmds] {len(bank)} distinct MPC commands from {len(dirs)} dir(s)")
+-+    return bank
+-+
+-+
+-+def load_baseline_cmds(cfg: dict | None = None) -> np.ndarray:
+-+    """The distinct [vx, vy, yaw] commands the MPC actually executed (read from the dataset's `cmd` fields).
+-+    Used (a) as a command bank for the env and (b) to decide which states bc_reg regularises. Shape (K, 3)."""
+-+    spec = (cfg or CFG).get("baseline_cmds") or {}
+-+    return _baseline_cmds(tuple(spec.get("dirs", [])), int(spec.get("decimals", 4)))
+-+
+-+
+- CFG = load_config()
+- OBS = ObsSpec.from_cfg(CFG)
+- 
+-diff --git a/python/rl/configs/model.yaml b/python/rl/configs/model.yaml
+-index 9927fdc..e25eae6 100644
+---- a/python/rl/configs/model.yaml
+-+++ b/python/rl/configs/model.yaml
+-@@ -17,6 +17,14 @@ obs:
+- #   gyro(3) | gravity in body frame(3) | cmd [v_x m/s, v_y m/s, yaw_rate rad/s](3) | q - q_default(12) | qd(12) | past actions (N*12, oldest -> newest)
+- #   v_y is always 0 in the MPC data (the MPC has no lateral command); it becomes active in the RL stage.
+- 
+-+# The MPC's own commands = the distinct `cmd` values stored in these (relabeled) datasets. They drive
+-+#   (a) env.cmd_bank_prob: part of the training commands are drawn from this set
+-+#   (b) bc_reg: only states whose command is near one of these are pulled toward the BC baseline
+-+# Paths are relative to the repo root.
+-+baseline_cmds:
+-+  dirs: [python/rl/data/mpc_relabeled, python/rl/data/mpc_train_relabeled]
+-+  decimals: 4
+-+
+- actor:
+-   hidden_dims: [512, 256, 128]   # number of layers = len(hidden_dims)
+-   activation: elu                # elu | relu | tanh | selu | lrelu
+-@@ -64,7 +72,8 @@ env:
+-   cmd_vx_range: [-0.08333, 0.08333]    # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
+-   cmd_vy_range: [0.0, 0.0]       # m/s, lateral: 0 until the lateral curriculum stage (the MPC cannot do it)
+-   cmd_yaw_range: [-0.5, 0.5]     # rad/s
+--  stand_prob: 0.1                # probability that a freshly sampled command is "stand still"
+-+  cmd_bank_prob: 0.5             # probability that a sampled command is one of the MPC's own (baseline_cmds); else uniform
+-+  stand_prob: 0.1                # probability that a freshly sampled UNIFORM command is "stand still"
+-   cmd_resample_s: [1.0, 3.0]     # new command every U(lo, hi) seconds; [0, 0] disables mid-episode changes
+-   cmd_p_brake: 0.15              # at a command change: go to zero (braking)
+-   cmd_p_flip: 0.15               # at a command change: reverse the current command (direction change)
+-@@ -98,16 +107,17 @@ env:
+-     joint_limit: -1.0
+-     termination: -10.0
+- 
+--# Keeps the PPO actor close to the frozen BC baseline on baseline-like commands (see rl/bc_reg.py).
+-+# Keeps the PPO actor close to the frozen BC baseline, ONLY on states whose command the MPC actually executes
+-+# (see baseline_cmds and rl/bc_reg.py). Elsewhere PPO is free.
+- bc_reg:
+-   enabled: true
+--  coef: 1.0
+-+  coef: 1.0                      # NOTE: Adam is scale-invariant, so this has almost no effect; lr and steps_per_iter set the strength
+-   lr: 1.0e-4
+--  steps_per_iter: 10              # supervised steps after every PPO update
+-+  steps_per_iter: 10             # supervised steps after every PPO update
+-   batch_size: 4096
+--  baseline_vx_abs_max: 0.1
+--  baseline_yaw_abs_max: 0.5
+--  anneal_iters: 0                # >0: linearly fade the coefficient to 0 over this many iterations
+-+  tol_v: 0.005                   # m/s   a command counts as "baseline" if within these tolerances of an MPC command
+-+  tol_yaw: 0.02                  # rad/s
+-+  anneal_iters: 600              # linearly fade the regulariser to 0 over this many iterations (0 = never fade)
+- 
+- eval:
+-   cmds: [[0.0, 0.0, 0.0], [0.08, 0.0, 0.0], [-0.08, 0.0, 0.0], [0.0, 0.0, 0.3], [0.08, 0.0, 0.3]]   # [vx, vy, yaw]; only used when eval.py has no --manifest
+-diff --git a/python/rl/environments/playground_env.py b/python/rl/environments/playground_env.py
+-index 63923ab..12d6061 100644
+---- a/python/rl/environments/playground_env.py
+-+++ b/python/rl/environments/playground_env.py
+-@@ -32,7 +32,7 @@ from mujoco_playground._src import mjx_env
+- PYTHON_DIR = Path(__file__).resolve().parents[2]
+- sys.path.insert(0, str(PYTHON_DIR))
+- 
+--from rl.config import CFG, OBS, NUM_JOINTS, Q_DEFAULT_PATH
+-+from rl.config import CFG, OBS, NUM_JOINTS, Q_DEFAULT_PATH, load_baseline_cmds
+- from rl.obs import build_obs, roll_history
+- from sim.util.mujoco_robot_map import MuJuCoMap
+- import sim.config as cfg
+-@@ -51,6 +51,7 @@ def _load_mj_model() -> mujoco.MjModel:
+- 
+- def default_config(cfg_dict: dict | None = None) -> config_dict.ConfigDict:
+-     c = config_dict.ConfigDict(copy.deepcopy((cfg_dict or CFG)["env"]))
+-+    c.cmd_bank = load_baseline_cmds(cfg_dict or CFG).tolist()      # MPC's own commands, sampled with prob env.cmd_bank_prob
+-     c.ctrl_dt = 1.0 / OBS.policy_hz
+-     c.sim_dt = float(_load_mj_model().opt.timestep)
+-     return c
+-@@ -87,6 +88,9 @@ class QuadrupedEnv(mjx_env.MjxEnv):
+-         self._dr = bool(c.dr.enabled)
+-         self._lat_max = int(c.dr.latency_steps_max)
+-         self._resample = float(c.cmd_resample_s[1]) > 0
+-+        bank = np.asarray(c.get("cmd_bank", []), np.float32).reshape(-1, 3)
+-+        self._bank = jnp.asarray(bank)
+-+        self._bank_p = float(c.get("cmd_bank_prob", 0.0)) if len(bank) else 0.0
+- 
+-         # feet: bodies, colliding geoms (for contact detection), friction table (for friction DR)
+-         self._foot_bodies = np.asarray(mp.foot_bodies)
+-@@ -147,11 +151,15 @@ class QuadrupedEnv(mjx_env.MjxEnv):
+-         return {"policy": policy, "privileged": priv}
+- 
+-     def _sample_cmd(self, key):
+--        k1, k2, k3, k4 = jax.random.split(key, 4)
+-+        k1, k2, k3, k4, k5, k6 = jax.random.split(key, 6)
+-         c = self._config
+-         vx, vy, w = _u(k1, c.cmd_vx_range), _u(k2, c.cmd_vy_range), _u(k3, c.cmd_yaw_range)
+-         stand = jax.random.uniform(k4) < c.stand_prob
+--        return jnp.where(stand, 0.0, jnp.stack([vx, vy, w])).astype(jnp.float32)
+-+        uniform_cmd = jnp.where(stand, 0.0, jnp.stack([vx, vy, w]))
+-+        if self._bank_p > 0:                         # with prob cmd_bank_prob: one of the MPC's own commands
+-+            pick = self._bank[jax.random.randint(k5, (), 0, self._bank.shape[0])]
+-+            uniform_cmd = jnp.where(jax.random.uniform(k6) < self._bank_p, pick, uniform_cmd)
+-+        return uniform_cmd.astype(jnp.float32)
+- 
+-     def _sample_period(self, key):
+-         if not self._resample:
+-diff --git a/python/rl/obs.py b/python/rl/obs.py
+-index 09048f6..e3b7439 100644
+---- a/python/rl/obs.py
+-+++ b/python/rl/obs.py
+-@@ -24,4 +24,10 @@ def roll_history(xp, hist, act):
+-     """Drop the oldest action, append `act` as the newest."""
+-     if hist.shape[-2] == 0:
+-         return hist
+--    return xp.concatenate([hist[..., 1:, :], act[..., None, :]], axis=-2)
+-\ No newline at end of file
+-+    return xp.concatenate([hist[..., 1:, :], act[..., None, :]], axis=-2)
+-+
+-+
+-+def near_baseline_cmds(cmd, bank, tol):
+-+    """cmd (N,3), bank (K,3), tol (3,) -> bool (N,): True where the command is within `tol` (per component) of ANY bank
+-+    command. Works with numpy arrays and torch tensors."""
+-+    return (abs(cmd[:, None, :] - bank[None]) <= tol).all(-1).any(-1)
+-\ No newline at end of file
+\ No newline at end of file
+diff --git a/logs/rsl_rl/stage_1/model.yaml b/logs/rsl_rl/stage_1/model.yaml
+deleted file mode 100644
+index e25eae6..0000000
+--- a/logs/rsl_rl/stage_1/model.yaml
++++ /dev/null
+@@ -1,127 +0,0 @@
+-# Single source of truth for: observation layout, network size, BC + PPO hyperparameters,
+-# env/reward settings and eval grid. Used by gen_mpc_data.py, the Playground env, BC, train.py, eval.py.
+-# CHANGING anything under `obs:` changes the observation size -> regenerate datasets + retrain.
+-
+-policy_hz: 50.0
+-
+-obs:
+-  action_history_s: 0.5     # seconds of past actions fed to the net  (N = round(s * policy_hz) = 25 steps)
+-  action_scale: 1.0         # q_target = q_default + action_scale * action   (must match the teacher labels)
+-  # !! Set these to the values that were in your old rl/environments/env.py (the defaults are legged_gym-style guesses)
+-  gyro_scale: 0.25
+-  cmd_scale_lin: 2.0         # applies to both v_x and v_y
+-  cmd_scale_ang: 0.25
+-  qd_scale: 0.05
+-
+-# Observation layout (flattened, in this order):
+-#   gyro(3) | gravity in body frame(3) | cmd [v_x m/s, v_y m/s, yaw_rate rad/s](3) | q - q_default(12) | qd(12) | past actions (N*12, oldest -> newest)
+-#   v_y is always 0 in the MPC data (the MPC has no lateral command); it becomes active in the RL stage.
+-
+-# The MPC's own commands = the distinct `cmd` values stored in these (relabeled) datasets. They drive
+-#   (a) env.cmd_bank_prob: part of the training commands are drawn from this set
+-#   (b) bc_reg: only states whose command is near one of these are pulled toward the BC baseline
+-# Paths are relative to the repo root.
+-baseline_cmds:
+-  dirs: [python/rl/data/mpc_relabeled, python/rl/data/mpc_train_relabeled]
+-  decimals: 4
+-
+-actor:
+-  hidden_dims: [512, 256, 128]   # number of layers = len(hidden_dims)
+-  activation: elu                # elu | relu | tanh | selu | lrelu
+-  init_std: 0.02                  # small so PPO fine-tuning doesn't wash out the BC policy
+-
+-critic:
+-  hidden_dims: [512, 256, 128]
+-  activation: elu
+-
+-bc:
+-  lr: 1.0e-3
+-  weight_decay: 1.0e-5
+-  # Anti-copycat augmentation: the 25-step action history makes 'repeat the last action' an easy shortcut.
+-  history_noise_std: 0.02        # gaussian noise (action units) added to the history inputs during training
+-  history_dropout_p: 0.2         # per-sample probability that the whole history is zeroed during training
+-  epochs: 60
+-  batch_size: 4096
+-  val_frac: 0.1                  # only used when --val_dir is not given
+-
+-ppo:
+-  num_learning_epochs: 5
+-  num_mini_batches: 4
+-  learning_rate: 3.0e-5          # low: we start from a BC policy
+-  schedule: adaptive
+-  gamma: 0.99
+-  lam: 0.95
+-  entropy_coef: 0.0
+-  desired_kl: 0.01
+-  max_grad_norm: 1.0
+-  value_loss_coef: 1.0
+-  use_clipped_value_loss: true
+-  clip_param: 0.2
+-
+-runner:
+-  num_steps_per_env: 24
+-  max_iterations: 1500
+-  save_interval: 50
+-  experiment_name: bc_ppo
+-  run_name: ""
+-  logger: tensorboard
+-  seed: 1
+-
+-env:
+-  episode_length: 1000           # policy steps (20 s at 50 Hz)
+-  cmd_vx_range: [-0.08333, 0.08333]    # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
+-  cmd_vy_range: [0.0, 0.0]       # m/s, lateral: 0 until the lateral curriculum stage (the MPC cannot do it)
+-  cmd_yaw_range: [-0.5, 0.5]     # rad/s
+-  cmd_bank_prob: 0.5             # probability that a sampled command is one of the MPC's own (baseline_cmds); else uniform
+-  stand_prob: 0.1                # probability that a freshly sampled UNIFORM command is "stand still"
+-  cmd_resample_s: [1.0, 3.0]     # new command every U(lo, hi) seconds; [0, 0] disables mid-episode changes
+-  cmd_p_brake: 0.15              # at a command change: go to zero (braking)
+-  cmd_p_flip: 0.15               # at a command change: reverse the current command (direction change)
+-  min_height_frac: 0.6           # terminate if base z < frac * measured standing height
+-  push:
+-    prob: 0.8                    # fraction of episodes that get one push
+-    accel_range: [0.5, 5.0]      # push acceleration in m/s^2 (force = accel * mass); eval tests up to 4.0
+-    t_range_s: [1.0, 8.0]
+-    dur_s: 0.1
+-  dr:                            # domain randomisation, sampled per episode (eval.py turns it off)
+-    enabled: true
+-    friction_range: [0.6, 1.4]         # scale on geom sliding friction
+-    motor_strength_range: [0.85, 1.15] # scale on servo kp
+-    mass_scale_range: [0.9, 1.1]       # payload: scales base weight
+-    latency_steps_max: 1               # action delay of 0..N policy steps (20 ms each)
+-  track_sigma_lin: 0.02         # exp(-err^2 / sigma)
+-  track_sigma_yaw: 0.01
+-  air_time_target: 0.2           # s: swing shorter than this at touchdown is penalised, longer is rewarded
+-  air_time_bonus_clip: 0.3
+-  joint_limit_margin: 0.05       # rad
+-  reward_scales:
+-    track_lin: 1.0
+-    track_yaw: 0.75
+-    upright: -2.0
+-    action_rate: -0.05
+-    pose: -0.02                  # weak: agile motion must be allowed to leave the default pose
+-    alive: 0.1
+-    feet_air_time: 0.5
+-    foot_slip: -0.1
+-    torque: -0.05                # dimensionless (normalised by actuator force range)
+-    joint_limit: -1.0
+-    termination: -10.0
+-
+-# Keeps the PPO actor close to the frozen BC baseline, ONLY on states whose command the MPC actually executes
+-# (see baseline_cmds and rl/bc_reg.py). Elsewhere PPO is free.
+-bc_reg:
+-  enabled: true
+-  coef: 1.0                      # NOTE: Adam is scale-invariant, so this has almost no effect; lr and steps_per_iter set the strength
+-  lr: 1.0e-4
+-  steps_per_iter: 10             # supervised steps after every PPO update
+-  batch_size: 4096
+-  tol_v: 0.005                   # m/s   a command counts as "baseline" if within these tolerances of an MPC command
+-  tol_yaw: 0.02                  # rad/s
+-  anneal_iters: 600              # linearly fade the regulariser to 0 over this many iterations (0 = never fade)
+-
+-eval:
+-  cmds: [[0.0, 0.0, 0.0], [0.08, 0.0, 0.0], [-0.08, 0.0, 0.0], [0.0, 0.0, 0.3], [0.08, 0.0, 0.3]]   # [vx, vy, yaw]; only used when eval.py has no --manifest
+-  accels: [1.0, 2.0, 3.0, 4.0]
+-  angles_deg: [0, 90, 180, 270]
+-  push_t_s: 6.0
+-  episode_s: 10.0
+\ No newline at end of file
+diff --git a/logs/rsl_rl/stage_1/model_0.pt b/logs/rsl_rl/stage_1/model_0.pt
+deleted file mode 100644
+index d6da399..0000000
+Binary files a/logs/rsl_rl/stage_1/model_0.pt and /dev/null differ
+diff --git a/logs/rsl_rl/stage_1/model_100.pt b/logs/rsl_rl/stage_1/model_100.pt
+deleted file mode 100644
+index 11f103e..0000000
+Binary files a/logs/rsl_rl/stage_1/model_100.pt and /dev/null differ
+diff --git a/logs/rsl_rl/stage_1/model_50.pt b/logs/rsl_rl/stage_1/model_50.pt
+deleted file mode 100644
+index 88fba6c..0000000
+Binary files a/logs/rsl_rl/stage_1/model_50.pt and /dev/null differ
+diff --git a/logs/rsl_rl/stage_1/overrides.yaml b/logs/rsl_rl/stage_1/overrides.yaml
+deleted file mode 100644
+index 246a9f3..0000000
+--- a/logs/rsl_rl/stage_1/overrides.yaml
++++ /dev/null
+@@ -1,3 +0,0 @@
+-bc_ckpt: python/rl/data/bc_actor.pt
+-resume: null
+-set: []

@@ -2,7 +2,7 @@
 #
 #   mjpython python/rl/play.py --ckpt python/rl/data/bc_actor.pt logs/rsl_rl/<exp>/<run>/model_99.pt \
 #            --cmd 0.08333 0 0 --view
-#   mjpython python/rl/play.py --ckpt python/rl/data/bc_actor.pt logs/rsl_rl/stage_1/model_100.pt --cmd 0.08333 0 0 --view
+#   mjpython python/rl/play.py --ckpt python/rl/data/bc_actor.pt logs/rsl_rl/stage_1/3/model_300.pt --cmd 0.08333 0 0 --view
 #
 # --view opens a viewer per checkpoint, in order (close the window to continue; needs mjpython on macOS).
 # Without --view it runs headless and only prints the numbers, so BC and PPO can be compared side by side.

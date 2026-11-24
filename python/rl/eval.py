@@ -1,6 +1,6 @@
 # Evaluate a BC checkpoint (bc_actor.pt) or an rsl_rl checkpoint (model_*.pt).
 #   python python/rl/eval.py offline --ckpt python/rl/data/bc_actor.pt --data python/rl/data/mpc_relabeled
-#   python python/rl/eval.py rollout --ckpt logs/rsl_rl/stage_1/model_100.pt --manifest python/rl/data/mpc_relabeled/manifest.json
+#   python python/rl/eval.py rollout --ckpt logs/rsl_rl/stage_1/2/model_200.pt --manifest python/rl/data/mpc_relabeled/manifest.json
 #   python python/rl/eval.py rollout --ckpt python/rl/data/bc_actor.pt --manifest python/rl/data/mpc_relabeled/manifest.json
 #
 # offline : one-step action MSE vs the teacher on the fixed test set (teacher-forced: history comes from the MPC), overall
