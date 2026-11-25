@@ -87,7 +87,7 @@ def sim():
             
             state_visualizer.update(
                 swing_leg=Movement.index_name(lc.swing_leg),
-                gait=Movement.order_name(lc._gait.order),
+                gait=lc._gait.name,
                 vel_cmd=core.v_cmd_mps * 1e3,
                 vel_real=lc._v,
                 vel_est=core.estimator.state.linear_vel[0] * 1e3,

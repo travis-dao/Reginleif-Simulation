@@ -273,6 +273,7 @@ class LegController:
         # first = self._most_overdue_leg() if self._last_swing_leg >= 0 else gait.order[0]
         first = self._last_swing_leg if self._last_swing_leg >= 0 else gait.order[0]
         self._schedule_from(first, delay_s)
+        self.a_v_mm_s2 = 2000 if self._gait is GAIT_RUN_F else 600
         return True
 
     @property

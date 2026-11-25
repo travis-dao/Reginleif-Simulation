@@ -67,6 +67,8 @@ class Leg:
         self._gait: Gait = GAIT_WALK_F
         self.stance_vel = Vec3(0.0, 0.0, 0.0)                       # mm/s: live sweep velocity
         self.step_vec = Vec3(self._gait.timing.step_length_mm, 0.0, 0.0)    # mm: foot displacement over one stance
+        self.swing_v0 = Vec3(0.0, 0.0, 0.0)
+
 
         self._move_leg()
 
@@ -105,6 +107,7 @@ class Leg:
         self._mpc_offset_cmd = offset_lf.copy()
 
     def start_swing(self, target_pos_lf: Vec3) -> None:
+        self.swing_v0 = self.stance_vel.copy()
         self.foot_state.swing_start = self.foot_state.target.copy()
         self.foot_state.swing_target = target_pos_lf.copy()
         self.swing_phase = 0.0
@@ -212,15 +215,15 @@ class Leg:
 
 
         T = self._gait.timing.swing_s
-        v0 = Vec3(0, 0, 0)                      # or stance_vel at liftoff for continuity
+        v0 = self.swing_v0 * 0.7 # 1.0 = full continuity; reduce if it overshoots the rear reach
         v1 = self.stance_vel                    # mm/s, already (-v,...) in leg frame
         h00 = 2*t**3 - 3*t**2 + 1; h10 = t**3 - 2*t**2 + t
         h01 = -2*t**3 + 3*t**2;    h11 = t**3 - t**2
         foot.x = h00*start.x + h10*T*v0.x + h01*target.x + h11*T*v1.x
         foot.y = h00*start.y + h10*T*v0.y + h01*target.y + h11*T*v1.y
 
-        # Parabolic clearance arc: zero at both endpoints, maximum at midpoint.
-        foot.z = start.z + self._gait.timing.step_height_mm * pow(math.sin(math.pi * t), 2)
+        u = t ** 0.7
+        foot.z = start.z + self._gait.timing.step_height_mm * math.sin(math.pi * u) ** 2
 
         if t >= 1.0:
             self.foot_state.target = target.copy()
