@@ -129,15 +129,18 @@ class Gait:
 
 _T, _G = Movement.SWING_DURATION_S, Movement.GAP_DURATION_S
 
-def run_gait(name, swing_s, duty, step_len=100.0, step_h=40.0):
-    duty = max(duty, 0.3)                    # keep >= 1 foot on the ground
+def run_gait(name, swing_s, duty, lag=0.25, step_len=100.0, step_h=40.0):
+    duty = max(duty, 0.45)
     t = GaitTiming(swing_s=swing_s, gap_s=0.0,
                    step_length_mm=step_len, step_height_mm=step_h,
                    duty_override=duty)
-    # period = swing_s / (1 - duty); phase spacing stays 0.25 -> same sequential order
-    return Gait(name, Movement.ORDER_WALK_F, t, phase_offsets=(0.0, 0.25, 0.5, 0.75))
+    # order is FL, BR, FR, BL, so the diagonal pairs are (FL,BR) and (FR,BL).
+    # lag = delay inside each diagonal pair: 0 = trot, 0.25 = fully sequential
+    return Gait(name, Movement.ORDER_WALK_F, t,
+                phase_offsets=(0.0, lag, 0.5, 0.5 + lag))
 
-GAIT_RUN_F = run_gait("RUN_F", swing_s=0.3, duty=0.4, step_len=100, step_h=50)
+GAIT_RUN_F = run_gait("RUN_F", swing_s=0.25, duty=0.5, lag=0.25,
+                      step_len=110, step_h=50)
 
 GAIT_WALK_F = Gait("WALK_F", Movement.ORDER_WALK_F, GaitTiming(_T,       _G,     duty_zheta=3.8))
 GAIT_WALK_B = Gait("WALK_B", Movement.ORDER_WALK_B, GaitTiming(_T * 1.3,       _G * 1.3,     duty_zheta=4.0))

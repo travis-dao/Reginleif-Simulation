@@ -11,7 +11,7 @@ STAND_HEIGHT = 0.07 # measure
 FALL_UP_Z = 0.5
 FALL_HEIGHT = 0.8 * STAND_HEIGHT  # 0.30 m
 
-HORIZON = 20
+HORIZON = 18
 MPC_DT = 0.03
 SETTLE_TIME_S = 0.1       # let the robot drop and stand on the kinematic gait before MPC engages
 MPC_GAIN = 0.55            # mm of foot offset per N. Set 0.0 to run the pure gait (isolates MPC from gait problems)

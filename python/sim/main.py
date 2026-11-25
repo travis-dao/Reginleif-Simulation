@@ -22,6 +22,7 @@ import sim.config as cfg
 from sim.util.input_map import map_input_to_command
 from input.input import InputController
 from input.visualizer import InputVisualizer, StateVisualizer
+from sim.util.log import Logger
 
 build_sim_xml(cfg.SRC, cfg.DST, cfg.START_HEIGHT, cfg.KP, cfg.FORCE)
 
@@ -37,7 +38,7 @@ mpc_cfg = MPCConfig(
     mass=float(model.body_subtreemass[body_id]),   # whole robot, not just the trunk
     I_body=subtree_inertia(model, data, body_id),  # base is level at t=0, so world axes == body axes
     R_weight=1e-3,                                 # larger = smoother forces, less chatter
-    mu=0.4,                                        # keep <= foot friction in the XML
+    mu=0.7,                                        # keep <= foot friction in the XML
     # [roll pitch yaw | x y z | wx wy wz | vx vy vz | g]
     Q_diag=np.array([50, 80, 10, 
                      0, 0, 50, 
@@ -61,6 +62,7 @@ core.reset(data.qpos[_qadr:_qadr + 3].copy(), np.zeros(3), imu.read())
 input_controller = InputController()
 # input_visualizer = InputVisualizer()
 state_visualizer = StateVisualizer()
+logger = Logger()
 
 def sim():
     mpc_active = False
@@ -110,6 +112,7 @@ def sim():
 
             if mpc_active:
                 core.step(dt)
+                logger(core, data.time)
 
             lc.update(dt, core.estimator.state)
 
@@ -125,3 +128,4 @@ if __name__ == "__main__":
     input_controller.stop()
     # input_visualizer.close()
     state_visualizer.close()
+    logger.save("python/sim/log/main.npz")

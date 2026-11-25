@@ -215,8 +215,12 @@ class Leg:
 
 
         T = self._gait.timing.swing_s
-        v0 = self.swing_v0 * 0.7 # 1.0 = full continuity; reduce if it overshoots the rear reach
-        v1 = self.stance_vel                    # mm/s, already (-v,...) in leg frame
+        cap = 0.6 * math.hypot(target.x - start.x, target.y - start.y)   # mm
+        def lim(v):
+            m = math.hypot(v.x, v.y) * T
+            return v * (cap / m) if m > cap else v
+        v0 = lim(self.swing_v0 * 0.7)
+        v1 = lim(self.stance_vel)
         h00 = 2*t**3 - 3*t**2 + 1; h10 = t**3 - 2*t**2 + t
         h01 = -2*t**3 + 3*t**2;    h11 = t**3 - t**2
         foot.x = h00*start.x + h10*T*v0.x + h01*target.x + h11*T*v1.x

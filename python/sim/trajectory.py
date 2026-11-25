@@ -22,7 +22,7 @@ import sim.config as cfg
 from sim.util.input_map import map_input_to_command
 from input.input import InputController
 from input.visualizer import InputVisualizer, StateVisualizer
-from sim.util.force_logger import ForceLogger
+from sim.util.log import Logger
 
 build_sim_xml(cfg.SRC, cfg.DST, cfg.START_HEIGHT, cfg.KP, cfg.FORCE)
 
@@ -75,7 +75,7 @@ def hold_base():
 input_controller = InputController()
 # input_visualizer = InputVisualizer()
 state_visualizer = StateVisualizer()
-force_log = ForceLogger()
+logger = Logger()
 
 def sim():
     mpc_active = False
@@ -124,7 +124,7 @@ def sim():
 
             if mpc_active:
                 core.step(dt)
-                force_log(core, data.time)
+                logger(core, data.time)
 
             lc.update(dt, core.estimator.state)
 
@@ -145,4 +145,4 @@ if __name__ == "__main__":
     input_controller.stop()
     # input_visualizer.close()
     state_visualizer.close()
-    force_log.save("python/sim/log/foot_forces.npz")
+    logger.save("python/sim/log/trajectory.npz")

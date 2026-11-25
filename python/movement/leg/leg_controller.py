@@ -271,7 +271,9 @@ class LegController:
             delay_s = max(min(1.0 - p for p in self._psi), 0.0) * self.period_s
         self._gait = gait
         # first = self._most_overdue_leg() if self._last_swing_leg >= 0 else gait.order[0]
-        first = self._last_swing_leg if self._last_swing_leg >= 0 else gait.order[0]
+        uniform = all(abs(o - 0.25 * j) < 1e-9 for j, o in enumerate(gait.phase_offsets))
+        first = (self._last_swing_leg if uniform and self._last_swing_leg >= 0
+                else gait.order[0])
         self._schedule_from(first, delay_s)
         self.a_v_mm_s2 = 2000 if self._gait is GAIT_RUN_F else 600
         return True
