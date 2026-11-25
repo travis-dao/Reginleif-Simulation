@@ -1,8 +1,6 @@
 # Watch a policy in CPU MuJoCo and print what the robot actually does with a given command.
 #
-#   mjpython python/rl/play.py --ckpt python/rl/data/bc_actor.pt logs/rsl_rl/<exp>/<run>/model_99.pt \
-#            --cmd 0.08333 0 0 --view
-#   mjpython python/rl/play.py --ckpt python/rl/data/bc_actor.pt logs/rsl_rl/stage_1/3/model_300.pt --cmd 0.08333 0 0 --view
+#   mjpython python/rl/play.py --ckpt python/rl/data/bc_actor.pt logs/rsl_rl/stage_1/5/model_500.pt --commands 0.08333 0 0 \ 0 0 0 --view
 #
 # --view opens a viewer per checkpoint, in order (close the window to continue; needs mjpython on macOS).
 # Without --view it runs headless and only prints the numbers, so BC and PPO can be compared side by side.
@@ -64,60 +62,114 @@ class Sim:
         return c
 
 
-def run(sim, policy, cmd, seconds, view):
+def run(sim, policy, commands, seconds, view):
     m, mp, base = sim.model, sim.mp, sim.base
     d = sim.fresh(sim.z_stand + 0.005)
     decim = max(1, int(round(1.0 / (OBS.policy_hz * m.opt.timestep))))
     hist = np.zeros((OBS.history_len, NUM_JOINTS), np.float32)
-    cmd = np.asarray(cmd, np.float32)
     down = np.array([0.0, 0.0, -1.0])
     viewer = None
     if view:
         from mujoco import viewer as viewer
         viewer = viewer.launch_passive(m, d)
 
-    vb, wz, zs, td, travel = [], [], [], 0, 0.0
-    prev_c, prev_q, alive, t_alive = sim.contacts(d), d.qpos[mp.q_adr].copy(), True, 0.0
-    for step in range(int(seconds * OBS.policy_hz)):
-        if viewer is not None and not viewer.is_running():
-            break
-        t0 = time.time()
-        R = d.xmat[base].reshape(3, 3)
-        obs = build_obs(np, OBS, d.qvel[sim.dof + 3:sim.dof + 6], R.T @ down, cmd,
-                        d.qpos[mp.q_adr], d.qvel[mp.v_adr], sim.q_default, hist)
-        with torch.no_grad():
-            act = np.clip(policy(torch.from_numpy(obs)[None]).cpu().numpy()[0], -1.0, 1.0).astype(np.float32)
-        q_t = sim.q_default + OBS.action_scale * act
-        d.ctrl[mp.aids] = np.where(mp.limited, np.clip(q_t, mp.range[:, 0], mp.range[:, 1]), q_t)
-        hist = roll_history(np, hist, act)
-        for _ in range(decim):
-            mujoco.mj_step(m, d)
+    results = []
 
-        R = d.xmat[base].reshape(3, 3)
-        if R[2, 2] < cfg.FALL_UP_Z or d.qpos[sim.qa + 2] < sim.min_z:
-            alive = False
+    for cmd_idx, cmd in enumerate(commands):
+        cmd = np.asarray(cmd, np.float32)
+
+        print(f"\nCommand {cmd_idx + 1}/{len(commands)}: [vx={cmd[0]:.3f}, vy={cmd[1]:.3f}, yaw={cmd[2]:.3f}]")
+
+        vb, wz, zs = [], [], []
+        td, travel = 0, 0.0
+
+        prev_c = sim.contacts(d)
+        prev_q = d.qpos[mp.q_adr].copy()
+
+        alive = True
+        t_alive = 0.0
+
+        for step in range(int(seconds * OBS.policy_hz)):
+            if viewer is not None and not viewer.is_running():
+                alive = False
+                break
+
+            t0 = time.time()
+
+            R = d.xmat[base].reshape(3, 3)
+
+            obs = build_obs(np, OBS, d.qvel[sim.dof + 3:sim.dof + 6], R.T @ down, cmd, d.qpos[mp.q_adr], d.qvel[mp.v_adr], sim.q_default, hist)
+
+            with torch.no_grad():
+                act = np.clip(policy(torch.from_numpy(obs)[None]).cpu().numpy()[0], -1.0, 1.0).astype(np.float32)
+
+            q_t = sim.q_default + OBS.action_scale * act
+
+            d.ctrl[mp.aids] = np.where(mp.limited, np.clip(q_t, mp.range[:, 0], mp.range[:, 1]), q_t)
+
+            hist = roll_history(np, hist, act)
+
+            for _ in range(decim):
+                mujoco.mj_step(m, d)
+
+            R = d.xmat[base].reshape(3, 3)
+
+            if (R[2, 2] < cfg.FALL_UP_Z or d.qpos[sim.qa + 2] < sim.min_z):
+                alive = False
+                break
+
+            t_alive += 1.0 / OBS.policy_hz
+
+            vb.append(R.T @ d.qvel[sim.dof:sim.dof + 3])
+            wz.append(d.qvel[sim.dof + 5])
+            zs.append(d.qpos[sim.qa + 2])
+
+            c = sim.contacts(d)
+            q = d.qpos[mp.q_adr].copy()
+
+            td += int((c & ~prev_c).sum())
+            travel += float(np.abs(q - prev_q).sum())
+
+            prev_c, prev_q = c, q
+
+            if viewer is not None:
+                viewer.sync()
+                time.sleep(max(0.0, 1.0 / OBS.policy_hz - (time.time() - t0)))
+
+        T = max(t_alive, 1e-6)
+
+        vb = np.asarray(vb).reshape(-1, 3)
+
+        speed_cmd = float(np.hypot(cmd[0], cmd[1]))
+
+        along = float(vb[:, :2].mean(0) @ (cmd[:2] / speed_cmd)) if speed_cmd > 1e-6 and len(vb) else float("nan")
+
+        result = dict(
+            alive=alive,
+            T=T,
+            vx=float(vb[:, 0].mean()) if len(vb) else 0.0,
+            vy=float(vb[:, 1].mean()) if len(vb) else 0.0,
+            speed_frac=along / speed_cmd if speed_cmd > 1e-6 else float("nan"),
+            yaw=float(np.mean(wz)) if wz else 0.0,
+            yaw_frac=float(np.mean(wz)) / cmd[2] if abs(cmd[2]) > 1e-6 and wz else float("nan"),
+            td_per_s=td / T,
+            travel_per_s=travel / T,
+            z=float(np.mean(zs)) if zs else 0.0,
+        )
+
+        results.append((cmd.copy(), result))
+
+        print(f"  alive={alive} | vx={result['vx']:.4f} | vy={result['vy']:.4f} | yaw={result['yaw']:.4f} | touchdowns/s={result['td_per_s']:.2f}")
+
+        if not alive:
+            print("Robot fell. Ending command sequence.")
             break
-        t_alive += 1.0 / OBS.policy_hz
-        vb.append(R.T @ d.qvel[sim.dof:sim.dof + 3]); wz.append(d.qvel[sim.dof + 5]); zs.append(d.qpos[sim.qa + 2])
-        c, q = sim.contacts(d), d.qpos[mp.q_adr].copy()
-        td += int((c & ~prev_c).sum())                        # touchdown = foot goes from air to ground
-        travel += float(np.abs(q - prev_q).sum())
-        prev_c, prev_q = c, q
-        if viewer is not None:
-            viewer.sync()
-            time.sleep(max(0.0, 1.0 / OBS.policy_hz - (time.time() - t0)))
+
     if viewer is not None:
         viewer.close()
 
-    T = max(t_alive, 1e-6)
-    vb = np.asarray(vb).reshape(-1, 3)
-    # translation along the commanded direction, as a fraction of the commanded speed
-    speed_cmd = float(np.hypot(cmd[0], cmd[1]))
-    along = float(vb[:, :2].mean(0) @ (cmd[:2] / speed_cmd)) if speed_cmd > 1e-6 and len(vb) else float("nan")
-    return dict(alive=alive, T=T, vx=float(vb[:, 0].mean()) if len(vb) else 0.0, vy=float(vb[:, 1].mean()) if len(vb) else 0.0,
-                speed_frac=along / speed_cmd if speed_cmd > 1e-6 else float("nan"),
-                yaw=float(np.mean(wz)) if wz else 0.0, yaw_frac=float(np.mean(wz)) / cmd[2] if abs(cmd[2]) > 1e-6 and wz else float("nan"),
-                td_per_s=td / T, travel_per_s=travel / T, z=float(np.mean(zs)) if zs else 0.0)
+    return results
+
 
 
 def verdict(r, cmd):
@@ -135,32 +187,60 @@ def verdict(r, cmd):
     return (f"UNDER-TRACKING ({100 * tracking:.0f}% of the command): feet lift ({r['td_per_s']:.1f} touchdowns/s) "
             "but the body barely follows. Stepping in place, a weak response, or wrong direction")
 
+def parse_commands(args):
+    if args.commands is None:
+        return [args.cmd]
+
+    if len(args.commands) % 3 != 0:
+        raise ValueError(
+            "--commands must contain groups of 3 values: vx vy yaw"
+        )
+
+    return [
+        args.commands[i:i + 3]
+        for i in range(0, len(args.commands), 3)
+    ]
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", nargs="+", required=True, help="one or more: bc_actor.pt and/or rsl_rl model_*.pt")
-    ap.add_argument("--cmd", nargs=3, type=float, default=[0.0667, 0.0, 0.0], metavar=("VX", "VY", "YAW"))
-    ap.add_argument("--seconds", type=float, default=15.0)
+    ap.add_argument("--commands", nargs="+", type=float, default=None, metavar="VALUE", help="Multiple commands as groups of vx vy yaw")
+    ap.add_argument("--seconds", type=float, default=10.0)
     ap.add_argument("--view", action="store_true")
     ap.add_argument("--config", default=None)
     args = ap.parse_args()
     conf = load_config(args.config) if args.config else CFG
     sim = Sim(conf)
-    print(f"standing height {sim.z_stand:.3f} m | command [vx, vy, yaw] = {args.cmd} | {args.seconds:.0f} s")
-    rows = []
+
+    commands = parse_commands(args)
+
+    print(f"Standing height: {sim.z_stand:.3f} m")
+    print(f"Duration per command: {args.seconds:.1f} s")
+
+    for i, cmd in enumerate(commands):
+        print(f"  {i + 1}. {cmd}")
+
     for ck in args.ckpt:
+        print(f"\n{'=' * 70}")
+        print(f"Checkpoint: {ck}")
+        print(f"{'=' * 70}")
+
         policy = load_policy(ck, conf, "cpu")
-        r = run(sim, policy, args.cmd, args.seconds, args.view)
-        rows.append((ck, r))
-    print(f"\n{'checkpoint':<44} {'alive':>5} {'vx':>7} {'vy':>7} {'speed%':>7} {'yaw':>7} {'yaw%':>6} {'td/s':>6} {'travel':>7} {'z':>6}")
-    for ck, r in rows:
-        pct = lambda f: f"{100 * f:6.0f}%" if not np.isnan(f) else f"{'-':>7}"
-        print(f"{Path(ck).parent.name + '/' + Path(ck).name:<44} {int(r['alive']):5d} {r['vx']:7.4f} {r['vy']:7.4f} {pct(r['speed_frac'])} "
-              f"{r['yaw']:7.4f} {pct(r['yaw_frac'])} {r['td_per_s']:6.2f} {r['travel_per_s']:7.2f} {r['z']:6.3f}")
-    print("\n  speed% / yaw% = measured body velocity as % of the command; td/s = foot touchdowns per second (all feet);"
-          "\n  travel = total joint motion in rad/s")
-    for ck, r in rows:
-        print(f"  {Path(ck).name}: {verdict(r, args.cmd)}")
+
+        results = run(sim, policy, commands, args.seconds, args.view)
+
+        for i, (cmd, r) in enumerate(results):
+            print(f"\nCommand {i + 1}: {cmd.tolist()}")
+            print(
+                f"  alive: {r['alive']}"
+                f" | vx: {r['vx']:.4f}"
+                f" | vy: {r['vy']:.4f}"
+                f" | yaw: {r['yaw']:.4f}"
+                f" | speed tracking: {r['speed_frac']:.2%}"
+                f" | touchdowns/s: {r['td_per_s']:.2f}"
+                f" | joint travel: {r['travel_per_s']:.2f}"
+                f" | height: {r['z']:.3f}"
+            )
 
 
 if __name__ == "__main__":

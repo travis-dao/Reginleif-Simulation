@@ -1,7 +1,7 @@
 # PPO fine-tuning with rsl_rl in the MuJoCo Playground env, initialised from the BC actor and (optionally) kept
 # close to it on baseline-like commands by rl/bc_reg.py.
 #
-#   python python/rl/train.py --bc_ckpt python/rl/data/bc_actor.pt --num_envs 2048
+#   python python/rl/train.py --bc_ckpt python/rl/data/bc_actor.pt --resume logs/rsl_rl/stage_1/4/model_400.pt --out stage_1/5 --iterations 101
 #
 # Curriculum = successive runs with config overrides, each resuming the previous run, e.g.
 #   stage 1 (speed + braking/reversals, DR on):   python python/rl/train.py --bc_ckpt BC --iterations 800
