@@ -1,3 +1,0 @@
-bc_ckpt: python/rl/data/bc_actor.pt
-resume: logs/rsl_rl/stage_1/3/model_300.pt
-set: []

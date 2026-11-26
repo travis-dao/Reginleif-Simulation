@@ -28,7 +28,7 @@ baseline_cmds:
 actor:
   hidden_dims: [512, 256, 128]   # number of layers = len(hidden_dims)
   activation: elu                # elu | relu | tanh | selu | lrelu
-  init_std: 0.02                  # small so PPO fine-tuning doesn't wash out the BC policy
+  init_std: 0.1                   # was 0.02. Running is outside the BC data, so PPO needs real exploration noise
 
 critic:
   hidden_dims: [512, 256, 128]
@@ -69,10 +69,10 @@ runner:
 
 env:
   episode_length: 1000           # policy steps (20 s at 50 Hz)
-  cmd_vx_range: [-0.08333, 0.08333]    # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
+  cmd_vx_range: [-0.08333, 0.15]    # m/s, negative = backward  <- set to your MPC's range (lc.v_max_mm_s / 1000)
   cmd_vy_range: [0.0, 0.0]       # m/s, lateral: 0 until the lateral curriculum stage (the MPC cannot do it)
-  cmd_yaw_range: [-0.5, 0.5]     # rad/s
-  cmd_bank_prob: 0.5             # probability that a sampled command is one of the MPC's own (baseline_cmds); else uniform
+  cmd_yaw_range: [-1.0, 1.0]     # rad/s (random-command episodes; maneuver turns use maneuver.turn_rate_range)
+  cmd_bank_prob: 0.2             # probability that a sampled command is one of the MPC's own (baseline_cmds); else uniform
   stand_prob: 0.1                # probability that a freshly sampled UNIFORM command is "stand still"
   cmd_resample_s: [1.0, 3.0]     # new command every U(lo, hi) seconds; [0, 0] disables mid-episode changes
   cmd_p_brake: 0.15              # at a command change: go to zero (braking)
@@ -89,6 +89,19 @@ env:
     motor_strength_range: [0.85, 1.15] # scale on servo kp
     mass_scale_range: [0.9, 1.1]       # payload: scales base weight
     latency_steps_max: 1               # action delay of 0..N policy steps (20 ms each)
+  # Maneuver episodes: run -> stop -> turn (180 deg or small +-angle) -> run, as a scripted command sequence.
+  # A turn lasts angle/rate seconds (open loop). Fraction (1 - prob) of episodes keep the random command resampling above.
+  maneuver:
+    enabled: true
+    prob: 0.7
+    p_turn180: 0.5               # P(turn is 180 deg) vs a small angle
+    small_angle_deg: [5.0, 30.0] # |angle| of the small turns, sign random
+    vx_range: [0.0833, 0.15]      # m/s forward run speed (raise this per stage with --set)
+    turn_rate_range: [0.5, 1.0]  # rad/s, |yaw rate| during the turn (raise per stage)
+    run_s: [1.0, 3.0]
+    stop_s: [0.2, 1.0]
+  track_lin_rel_ref: 0.0         # >0: sigma_lin *= 1 + (|cmd_xy| / ref)^2 ; use ~0.1 once vx >> 0.08. 0 = off
+  track_yaw_rel_ref: 0.0         # >0: sigma_yaw *= 1 + (|cmd_yaw| / ref)^2 ; use ~1.0 for fast turns. 0 = off
   track_sigma_lin: 0.02         # exp(-err^2 / sigma)
   track_sigma_yaw: 0.01
   air_time_target: 0.2           # s: swing shorter than this at touchdown is penalised, longer is rewarded
@@ -105,6 +118,7 @@ env:
     foot_slip: -0.1
     torque: -0.05                # dimensionless (normalised by actuator force range)
     joint_limit: -1.0
+    stand_still: -0.005          # joint-velocity^2 summed, only when the command is ~0. Tune so it is ~0.05-0.1 per step while creeping
     termination: -10.0
 
 # Keeps the PPO actor close to the frozen BC baseline, ONLY on states whose command the MPC actually executes
@@ -117,7 +131,7 @@ bc_reg:
   batch_size: 4096
   tol_v: 0.005                   # m/s   a command counts as "baseline" if within these tolerances of an MPC command
   tol_yaw: 0.02                  # rad/s
-  anneal_iters: 600              # linearly fade the regulariser to 0 over this many iterations (0 = never fade)
+  anneal_iters: 300              # linearly fade the regulariser to 0 over this many iterations (0 = never fade)
 
 eval:
   cmds: [[0.0, 0.0, 0.0], [0.08, 0.0, 0.0], [-0.08, 0.0, 0.0], [0.0, 0.0, 0.3], [0.08, 0.0, 0.3]]   # [vx, vy, yaw]; only used when eval.py has no --manifest

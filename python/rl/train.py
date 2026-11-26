@@ -1,16 +1,13 @@
 # PPO fine-tuning with rsl_rl in the MuJoCo Playground env, initialised from the BC actor and (optionally) kept
 # close to it on baseline-like commands by rl/bc_reg.py.
 #
-#   python python/rl/train.py --bc_ckpt python/rl/data/bc_actor.pt --resume logs/rsl_rl/stage_1/4/model_400.pt --out stage_1/5 --iterations 101
+#   python python/rl/train.py --bc_ckpt python/rl/data/bc_actor.pt --resume logs/rsl_rl/stage_1/5/model_500.pt --out stage_1/6-7 --iterations 201
 #
 # Curriculum = successive runs with config overrides, each resuming the previous run, e.g.
 #   stage 1 (speed + braking/reversals, DR on):   python python/rl/train.py --bc_ckpt BC --iterations 800
 #   stage 2 (add lateral):  python python/rl/train.py --bc_ckpt BC --resume logs/.../model_800.pt \\
 #                               --set env.cmd_vy_range=[-0.08,0.08] --iterations 800
 #   stage 3 (faster):       ... --set env.cmd_vx_range=[-0.2,0.2] env.cmd_vy_range=[-0.15,0.15]
-# Needs: pip install "rsl-rl-lib>=5" mujoco-playground tensordict pyyaml  (+ jax[cuda] for GPU MJX)
-# python python/rl/train.py --bc_ckpt python/rl/data/bc_actor.pt --num_envs 64 --iterations 100 --set bc_reg.lr=1e-4 bc_reg.steps_per_iter=10
-# python python/rl/train.py --bc_ckpt python/rl/data/bc_actor_v2.pt --num_envs 64 --iterations 100
 # tensorboard --logdir logs/rsl_rl
 import os
 
@@ -36,7 +33,7 @@ from rl.models import load_bc_into_actor
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--num_envs", type=int, default=64)
+    ap.add_argument("--num_envs", type=int, default=128)
     ap.add_argument("--iterations", type=int, default=None, help="default: runner.max_iterations")
     ap.add_argument("--bc_ckpt", default=None, help="BC actor checkpoint: initial weights and the bc_reg reference")
     ap.add_argument("--resume", default=None, help="rsl_rl checkpoint (model_*.pt) to continue from (curriculum stages)")
@@ -68,7 +65,8 @@ def main():
         if not args.bc_ckpt:
             raise SystemExit("bc_reg is enabled but --bc_ckpt was not given (it is the frozen reference). "
                              "Pass --bc_ckpt or use --no_bc_reg.")
-        BCRegularizer(runner, env, cfg, args.bc_ckpt, args.device)
+        reg = BCRegularizer(runner, env, cfg, args.bc_ckpt, args.device)
+        reg.it = getattr(runner, "current_learning_iteration", 0)   # carry the anneal across resumed blocks
 
     runner.learn(num_learning_iterations=args.iterations or train_cfg["max_iterations"])
 

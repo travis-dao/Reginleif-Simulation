@@ -4,6 +4,10 @@
   policy obs  = gyro | gravity_b | [v_x, v_y, yaw] cmd | q-q_default | qd | past N actions     (what the student gets)
   privileged  = body-frame lin vel | base height                                               (critic only)
 
+Maneuvers (env.maneuver): scripted run -> stop -> turn (180 deg or small +-angle) -> run sequences, expressed purely as a
+  time-varying [v_x, v_y, yaw] command, so the observation layout is unchanged. Episodes with maneuver.prob use them;
+  the rest keep the random command resampling below.
+
 Agility additions
   * commands are resampled mid-episode (new random command / brake to zero / reverse), so braking and direction
     changes are trained, not just constant-velocity walking
@@ -40,7 +44,7 @@ from sim.util.build_sim_xml import build_sim_xml
 
 _NEVER = 1 << 30
 _TERMS = ("track_lin", "track_yaw", "upright", "action_rate", "pose", "alive",
-          "feet_air_time", "foot_slip", "torque", "joint_limit")
+          "feet_air_time", "foot_slip", "torque", "joint_limit", "stand_still")
 _METRICS = _TERMS + ("lin_err", "yaw_err", "yaw_signed", "term_tilt", "term_height", "term_nan")
 
 
@@ -91,6 +95,13 @@ class QuadrupedEnv(mjx_env.MjxEnv):
         bank = np.asarray(c.get("cmd_bank", []), np.float32).reshape(-1, 3)
         self._bank = jnp.asarray(bank)
         self._bank_p = float(c.get("cmd_bank_prob", 0.0)) if len(bank) else 0.0
+
+        # maneuver curriculum (run -> stop -> turn -> run); prob 0 or enabled=false -> legacy random commands only
+        self._man = c.get("maneuver", None)
+        self._man_p = float(self._man.prob) if (self._man is not None and bool(self._man.get("enabled", False))) else 0.0
+        # optional speed-relative tracking: widens the reward sigma at high commanded speed (0 = off = old behaviour)
+        self._lin_ref = float(c.get("track_lin_rel_ref", 0.0))
+        self._yaw_ref = float(c.get("track_yaw_rel_ref", 0.0))
 
         # feet: bodies, colliding geoms (for contact detection), friction table (for friction DR)
         self._foot_bodies = np.asarray(mp.foot_bodies)
@@ -161,6 +172,28 @@ class QuadrupedEnv(mjx_env.MjxEnv):
             uniform_cmd = jnp.where(jax.random.uniform(k6) < self._bank_p, pick, uniform_cmd)
         return uniform_cmd.astype(jnp.float32)
 
+    # ---------------------------------------------------------------- maneuvers
+    def _man_plan(self, key):
+        """One maneuver: run at vx for run_n steps, stand for stop_n steps, turn at `rate` for turn_n steps.
+        Returns vx, signed yaw rate, int32 [run_n, stop_n, turn_n]. Turn length = angle / |rate| (open-loop)."""
+        m, hz = self._man, OBS.policy_hz
+        k = jax.random.split(key, 7)
+        vx = _u(k[0], m.vx_range)
+        big = jax.random.uniform(k[1]) < m.p_turn180                     # 180 deg turn vs small angle
+        rate = _u(k[2], m.turn_rate_range)
+        sign = jnp.where(jax.random.uniform(k[3]) < 0.5, -1.0, 1.0)
+        ang = jnp.where(big, jnp.pi, jnp.deg2rad(_u(k[4], m.small_angle_deg)))
+        run_n = jax.random.randint(k[5], (), int(m.run_s[0] * hz), int(m.run_s[1] * hz) + 1)
+        stop_n = jax.random.randint(k[6], (), int(m.stop_s[0] * hz), int(m.stop_s[1] * hz) + 1)
+        turn_n = jnp.maximum(jnp.ceil(ang / rate * hz), 1.0)
+        return vx, sign * rate, jnp.stack([run_n, stop_n, turn_n.astype(jnp.int32)]).astype(jnp.int32)
+
+    @staticmethod
+    def _man_cmd(phase, vx, rate):
+        z = jnp.zeros(())
+        return jnp.where(phase == 0, jnp.stack([vx, z, z]),
+                         jnp.where(phase == 1, jnp.zeros(3), jnp.stack([z, z, rate]))).astype(jnp.float32)
+
     def _sample_period(self, key):
         if not self._resample:
             return jnp.int32(_NEVER)
@@ -176,6 +209,11 @@ class QuadrupedEnv(mjx_env.MjxEnv):
                             ctrl=self._ctrl(self._target(jnp.zeros(NUM_JOINTS))))
         data = mjx.forward(self._mjx_model, data)
         push_on = jax.random.uniform(k[1]) < p.prob
+        if self._man_p > 0:
+            man_on = jax.random.uniform(k[11]) < self._man_p
+            m_vx, m_rate, m_n = self._man_plan(jax.random.fold_in(k[11], 1))
+        else:
+            man_on, m_vx, m_rate, m_n = jnp.bool_(False), jnp.float32(0.0), jnp.float32(0.0), jnp.ones(3, jnp.int32)
         t_push = jax.random.randint(k[2], (), int(p.t_range_s[0] * OBS.policy_hz), int(p.t_range_s[1] * OBS.policy_hz))
         if self._dr:
             fric, motor, mass = _u(k[7], dr.friction_range), _u(k[8], dr.motor_strength_range), _u(k[9], dr.mass_scale_range)
@@ -186,8 +224,10 @@ class QuadrupedEnv(mjx_env.MjxEnv):
         info = {
             "step": jnp.int32(0),
             "rng": k[5],
-            "cmd": self._sample_cmd(k[0]),
-            "next_cmd": self._sample_period(k[6]),
+            "cmd": jnp.where(man_on, self._man_cmd(jnp.int32(0), m_vx, m_rate), self._sample_cmd(k[0])),
+            "next_cmd": jnp.where(man_on, _NEVER, self._sample_period(k[6])).astype(jnp.int32),
+            "man_on": man_on, "man_phase": jnp.int32(0), "man_left": m_n[0],
+            "man_vx": jnp.asarray(m_vx, jnp.float32), "man_rate": jnp.asarray(m_rate, jnp.float32), "man_n": m_n,
             "hist": jnp.zeros((OBS.history_len, NUM_JOINTS), jnp.float32),
             "last_act": jnp.zeros(NUM_JOINTS, jnp.float32),
             "act_buf": jnp.zeros((self._lat_max + 1, NUM_JOINTS), jnp.float32),
@@ -214,13 +254,29 @@ class QuadrupedEnv(mjx_env.MjxEnv):
         # ---- mid-episode command change: new random command / brake to zero / reverse ----
         rng, k = jax.random.split(info["rng"])
         info["rng"] = rng
-        kf, ku, kt = jax.random.split(k, 3)
+        kf, ku, kt, km = jax.random.split(k, 4)
         u, cur = jax.random.uniform(ku), info["cmd"]
         new = jnp.where(u < c.cmd_p_brake, jnp.zeros(3),
                         jnp.where(u < c.cmd_p_brake + c.cmd_p_flip, -cur, self._sample_cmd(kf)))
         due = info["step"] == info["next_cmd"]
-        info["cmd"] = jnp.where(due, new, cur)
+        legacy_cmd = jnp.where(due, new, cur)
         info["next_cmd"] = jnp.where(due, info["step"] + self._sample_period(kt), info["next_cmd"])
+        if self._man_p > 0:
+            # maneuver state machine: phase 0 run -> 1 stop -> 2 turn -> 0 (new random maneuver)
+            left = info["man_left"] - 1
+            adv = left <= 0
+            nxt = (info["man_phase"] + 1) % 3
+            new_run = adv & (nxt == 0)
+            pvx, prate, pn = self._man_plan(km)
+            info["man_vx"] = jnp.where(new_run, pvx, info["man_vx"])
+            info["man_rate"] = jnp.where(new_run, prate, info["man_rate"])
+            info["man_n"] = jnp.where(new_run, pn, info["man_n"])
+            info["man_phase"] = jnp.where(adv, nxt, info["man_phase"])
+            info["man_left"] = jnp.where(adv, info["man_n"][info["man_phase"]], left)
+            man_cmd = self._man_cmd(info["man_phase"], info["man_vx"], info["man_rate"])
+            info["cmd"] = jnp.where(info["man_on"], man_cmd, legacy_cmd)
+        else:
+            info["cmd"] = legacy_cmd
 
         # ---- action latency + motor strength ----
         buf = jnp.concatenate([a[None], info["act_buf"][:-1]], axis=0)
@@ -274,11 +330,14 @@ class QuadrupedEnv(mjx_env.MjxEnv):
         q = d.qpos[self._q_adr]
         lin_err = (v_b[0] - cmd[0]) ** 2 + (v_b[1] - cmd[1]) ** 2
         yaw_err = (wz - cmd[2]) ** 2
+        # speed-relative tolerance (only if track_*_rel_ref > 0): a fixed sigma is far too tight at running speed / fast turns
+        lin_den = 1.0 + (jnp.linalg.norm(cmd[:2]) / self._lin_ref) ** 2 if self._lin_ref > 0 else 1.0
+        yaw_den = 1.0 + (jnp.abs(cmd[2]) / self._yaw_ref) ** 2 if self._yaw_ref > 0 else 1.0
         over = jnp.where(self._limited, jax.nn.relu(q - (self._hi - c.joint_limit_margin))
                          + jax.nn.relu((self._lo + c.joint_limit_margin) - q), 0.0)
         terms = {
-            "track_lin": jnp.exp(-lin_err / c.track_sigma_lin),
-            "track_yaw": jnp.exp(-yaw_err / c.track_sigma_yaw),
+            "track_lin": jnp.exp(-lin_err / (c.track_sigma_lin * lin_den)),
+            "track_yaw": jnp.exp(-yaw_err / (c.track_sigma_yaw * yaw_den)),
             "upright": jnp.sum(grav[:2] ** 2),
             "action_rate": jnp.sum((a - prev_a) ** 2),
             "pose": jnp.sum((q - self._q_default) ** 2),
@@ -287,6 +346,7 @@ class QuadrupedEnv(mjx_env.MjxEnv):
             "foot_slip": slip,
             "torque": jnp.mean((d.actuator_force[self._aids] / self._f_scale) ** 2),
             "joint_limit": jnp.sum(over),
+            "stand_still": jnp.sum(d.qvel[self._v_adr] ** 2) * (~moving),    # no stepping / joint motion on a zero command
         }
         bad = jnp.isnan(d.qpos).any() | jnp.isnan(d.qvel).any()
         tilt = -grav[2] < cfg.FALL_UP_Z

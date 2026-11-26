@@ -1,3 +1,0 @@
-bc_ckpt: python/rl/data/bc_actor.pt
-resume: null
-set: []

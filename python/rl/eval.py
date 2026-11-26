@@ -5,6 +5,7 @@
 #
 # offline : one-step action MSE vs the teacher on the fixed test set (teacher-forced: history comes from the MPC), overall
 #           and in the second after the push. Good for BC debugging, NOT a measure of closed-loop quality.
+# (maneuvers are switched off here: the grid uses fixed commands. Use eval_maneuver.py for run/stop/turn.)
 # rollout : closed loop in the Playground env over cfg["eval"] (command x push accel x push direction); survival + tracking.
 import os
 
@@ -115,7 +116,7 @@ def rollout(args, policy, device, cfg):
     grid = [(c, 0.0, 0.0) for c in cmds] + [(c, a, g) for c in cmds for a in e["accels"] for g in e["angles_deg"]]
     n = len(grid)
     print(f"{len(cmds)} commands x ({1} + {len(e['accels'])} accels x {len(e['angles_deg'])} angles) = {n} scenarios")
-    env = QuadrupedEnv(config_overrides={"episode_length": steps + 5, "dr.enabled": False})   # no timeouts, no DR: any done == fell
+    env = QuadrupedEnv(config_overrides={"episode_length": steps + 5, "dr.enabled": False, "maneuver.prob": 0.0})   # no timeouts, no DR: any done == fell
     vec = PlaygroundVecEnv(env, n, seed=0, device=device)
 
     cmd = jnp.asarray([g[0] for g in grid], jnp.float32)
