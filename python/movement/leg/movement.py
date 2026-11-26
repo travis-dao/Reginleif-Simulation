@@ -18,18 +18,18 @@ def clamp(value: float, lo: float, hi: float) -> float:
 # --------------------------------------------------------------------------
 class IK:
     @staticmethod
-    def solve(target: Vec3, body_coxa_x_mm: float, femur_length_mm: float, tibia_length_mm: float, c_min: float, c_max: float) -> Optional[Theta3]:
+    def solve(target: Vec3, coxa_offset: float, femur: float, tibia: float) -> Optional[Theta3]:
         x, y, z = target.x, target.y, target.z
+        c_max = femur + tibia
+        c_min = abs(femur - tibia)
  
-        r = math.hypot(x, y) - body_coxa_x_mm
+        r = math.hypot(x, y) - coxa_offset
         femur_to_tip = math.hypot(z, r)
  
-        if (femur_to_tip > c_max + EPSILON
-                or femur_to_tip < c_min - EPSILON
-                or femur_to_tip < EPSILON):
+        if (femur_to_tip > c_max + EPSILON or femur_to_tip < c_min - EPSILON or femur_to_tip < EPSILON):
             return None
  
-        a, b, c = femur_length_mm, tibia_length_mm, femur_to_tip
+        a, b, c = femur, tibia, femur_to_tip
         cos2 = clamp((a * a + c * c - b * b) / (2 * a * c), -1.0, 1.0)
         cos3 = clamp((a * a + b * b - c * c) / (2 * a * b), -1.0, 1.0)
  
@@ -44,6 +44,33 @@ class IK:
         """Flip for reverse-mounted servos."""
         return Theta3(180.0 - a.coxa, 180.0 - a.femur, 180.0 - a.tibia)
 
+class FK:
+    @staticmethod
+    def solve(angles: Theta3, coxa_offset: float, femur: float,
+              tibia: float) -> Vec3:
+        """Inverse of IK.solve: IK-convention angles (deg) -> foot position (mm), leg frame.
+        Pass the angles BEFORE IK.invert_angles / AFTER invert_angles has undone it."""
+        coxa = angles.coxa * DEG_TO_RAD
+        phi_f = angles.femur * DEG_TO_RAD                       # femur, from straight down toward +r
+        phi_t = phi_f + angles.tibia * DEG_TO_RAD - math.pi     # tibia direction; tibia = knee interior angle
+
+        r = femur * math.sin(phi_f) + tibia * math.sin(phi_t)
+        z = -(femur * math.cos(phi_f) + tibia * math.cos(phi_t))
+
+        rho = r + coxa_offset                                # horizontal distance from the leg origin
+        return Vec3(rho * math.cos(coxa), rho * math.sin(coxa), z)
+
+    @staticmethod
+    def solve_servo(leg_id: int, servo_angles: Theta3, coxa_offset: float,
+                    femur: float, tibia: float) -> Vec3:
+        """From the angles actually sent to the servos (what Leg._move_leg produces)
+        back to the leg-frame foot position, undoing the left-side invert and the right-side y flip."""
+        right = leg_id == 1 or leg_id == 2
+        a = servo_angles if right else IK.invert_angles(servo_angles)
+        p = FK.solve(a, coxa_offset, femur, tibia)
+        if right:
+            p.y *= -1.0
+        return p
 
 # --------------------------------------------------------------------------
 # MuJoCo interface
@@ -65,6 +92,15 @@ class LegDriver:
                 if aid == -1:
                     raise KeyError(f"Actuator '{name}' not found in model")
                 self.act_id[f"{leg}_{j}"] = aid
+
+        self.qadr: dict[str, int] = {}
+        for leg in self.LEG_NAMES:
+            for j in self.JOINTS:
+                name = f"{leg}_{j}"                      # joints are named leg0_coxa, leg0_femur, ...
+                jid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
+                if jid == -1:
+                    raise KeyError(f"Joint '{name}' not found in model")
+                self.qadr[name] = model.jnt_qposadr[jid]
  
     def set_angles(self, leg_idx: int, angles_deg: Theta3) -> None:
         """Write servo angles (deg) to the MuJoCo actuator controls (rad)."""
@@ -75,3 +111,13 @@ class LegDriver:
 
         if self.debug is True:
             print(f"Leg {leg_idx} | coxa={angles_deg.coxa}, femur={angles_deg.femur}, tibia={angles_deg.tibia}")
+
+    def get_angles(self, leg_idx: int) -> Theta3:
+        """Measured servo angles (deg), same convention as set_angles."""
+        leg = self.LEG_NAMES[leg_idx]
+        q = self.data.qpos
+        return Theta3(
+            coxa=float(q[self.qadr[f"{leg}_coxa"]]) * RAD_TO_DEG,
+            femur=float(q[self.qadr[f"{leg}_femur"]]) * RAD_TO_DEG,
+            tibia=float(q[self.qadr[f"{leg}_tibia"]]) * RAD_TO_DEG,
+        )

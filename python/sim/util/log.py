@@ -26,7 +26,7 @@ class Logger:
             return
         self._last = res
 
-        swinging = set(core.lc.get_swing_legs())
+        swinging = set(core.lc.swing_legs())
         self.t.append(t)
         self.forces.append(np.array(res.u0.foot_ground_force, dtype=float).reshape(4, 3))
         self.swing.append(np.array([i in swinging for i in range(4)]))

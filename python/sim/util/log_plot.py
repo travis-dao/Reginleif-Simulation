@@ -1,4 +1,4 @@
-# python python/sim/util/log_plot.py --log path/to/your/log.npz
+# python python/sim/util/log_plot.py --log python/sim/log/main.npz
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,7 +8,7 @@ def plot(args):
     d = np.load(args.log)
     t, F, S = d["t"], d["forces"], d["swing"]
 
-    mask = t >= 2.0
+    mask = (t >= 2.0) & (t <= 10.0)
     t, F, S = t[mask], F[mask], S[mask]
 
     leg_names = ("FL", "FR", "BR", "BL")
@@ -53,6 +53,26 @@ def plot(args):
         ax_n.set_xlabel("Time (s)")
 
         for ax in (ax_p, ax_r, ax_n):
+            ax.grid(True, alpha=0.3)
+
+    # --- foot offsets (separate figure) ---
+    if "offsets" in d.files:
+        O = d["offsets"][mask]
+        offset_names = ("X", "Y", "Z")
+
+        fig3, axes3 = plt.subplots(
+            3, 1, sharex=True, figsize=(9, 7)
+        )
+
+        for j, (ax, offset_name) in enumerate(
+            zip(axes3, offset_names)
+        ):
+            for i, leg_name in enumerate(leg_names):
+                ax.plot(t, O[:, i, j], label=leg_name)
+
+            ax.set_ylabel(f"{offset_name} (mm)")
+            ax.set_title(f"{offset_name} Offset — All Legs")
+            ax.legend(ncol=4)
             ax.grid(True, alpha=0.3)
 
         plt.tight_layout()

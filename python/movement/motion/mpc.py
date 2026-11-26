@@ -154,8 +154,8 @@ class MPCResult:
 
 @dataclass
 class MPCConfig:
-    horizon: int = 10
-    dt: float = 0.03
+    horizon: int = 24
+    dt: float = 0.04
     mass: float = 12.0
     I_body: np.ndarray = field(default_factory=lambda: np.eye(3))
     mu: float = 0.4

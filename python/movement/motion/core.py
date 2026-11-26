@@ -1,12 +1,3 @@
-"""Glue between LegController (mm, body frame, leg-by-leg gait) and MPC (m, N, world frame).
-
-Per control tick:
-    s = core.estimate(dt, imu)              # state estimator (Kalman filter), EVERY tick
-    core.step(dt, data.time)                # solve MPC (every solve_period) -> push foot offsets
-    leg_ctrl.update(dt, imu)                # gait + offsets -> servo angles
-    leg_ctrl.update_model_angles()
-"""
-
 from typing import List, Optional
 from enum import Enum, auto
 
@@ -23,12 +14,7 @@ from movement.motion.util import (
 from movement.motion.state_estimator import StateEstimator, EstimatorConfig, ImuData
 
 MM = 1e-3
-def _v_m(v: Vec3) -> np.ndarray:
-    """Vec3 in mm -> ndarray in m."""
-    return np.array([v.x, v.y, v.z]) * MM
-
-def _wrap(a: float) -> float:
-    return (a + np.pi) % (2 * np.pi) - np.pi
+def _v_m(v: Vec3) -> np.ndarray: return np.array([v.x, v.y, v.z]) * MM
 
 class Mode(Enum):
     STAND = auto()   # lc IDLE, holding position
@@ -50,7 +36,7 @@ class Core:
         self.mpc = mpc
         self.lc = leg_ctrl
         self.z_des = z_des_m
-        self.yaw_des = yaw_des
+        self.yaw_des = yaw_des           # fixed heading to hold; latched from the estimate if None
         self.period = solve_period_s
         self.gain = gain_mm_per_n
         self.max_corr = max_corr_mm
@@ -61,8 +47,6 @@ class Core:
         self._hold_xy = None
 
         self.v_cmd_mps = 0.0
-        self.yaw_rate_cmd = 0.0          # rad/s, + = left
-        self.yaw_leash_rad = 0.3         # how far yaw_des may run ahead of the measured yaw
 
         self._offsets: List[Vec3] = [Vec3(0.0, 0.0, 0.0) for _ in range(NUM_LEGS)]
         self._t_since = 1e9
@@ -72,12 +56,10 @@ class Core:
         # leg kinematics + the gait's swing leg; orientation / gyro come from the IMU.
         self.estimator = StateEstimator(EstimatorConfig(
             foot_rel_body_fn=self._foot_rel_body_m,
-            swing_leg_fn=self.lc.get_swing_legs,
+            swing_leg_fn=self.lc.swing_legs,
             gravity_z=gravity_z_mps2,
         ))
         self.state: State = self.estimator.state
-
-        self._v_prev = 0.0
 
     # ------------------------------------------------------------------
     def reset(self, p0: np.ndarray, v0: np.ndarray, imu: ImuData) -> None:
@@ -102,18 +84,14 @@ class Core:
         if self._t_since < self.period:
             return self.last_result
 
-        elapsed = self._t_since
         self._t_since = 0.0
         s0 = self.state
-        self.lc.set_body_command(self.v_cmd_mps / MM, self.yaw_rate_cmd)
+        if self.yaw_des is None:
+            self.yaw_des = s0.yaw
+        self.lc.set_body_command(self.v_cmd_mps / MM)
         self._update_mode(s0)
 
-        # unwrap yaw_des against the measured yaw and leash it
-        # print(s0.yaw - self.yaw_des)
-        self.yaw_des = s0.yaw + float(np.clip(_wrap(self.yaw_des - s0.yaw), -self.yaw_leash_rad, self.yaw_leash_rad))
         x_ref = self._reference(s0)
-        if self.mode is Mode.WALK:
-            self.yaw_des += self.lc.body_twist()[1] * elapsed
         contact = self._contact_schedule()
         feet = self._foot_rel_pos(s0, x_ref, contact)
 
@@ -122,7 +100,6 @@ class Core:
         if res.success:  # on failure keep the last good offsets
             # Convert forces to foot position corrections
             self._offsets = self._to_offsets(s0, res.u0.foot_ground_force, contact[0], s0.yaw)
-            # print(self._offsets)
         self.lc.apply_mpc_corrections(self._offsets)
         return res
 
@@ -130,27 +107,26 @@ class Core:
     def _reference(self, s0: State) -> List[np.ndarray]:
         dt, N = self.mpc.cfg.dt, self.mpc.N
         if self.mode is Mode.WALK:
-            v_mm, w = self.lc.body_twist()
-            v = v_mm * MM
+            v = self.v_cmd_mps * MM
         else:
-            v, w = 0.0, 0.0
+            v = 0.0
 
         p = s0.pos.copy()
         if self.mode is Mode.STAND and self._hold_xy is not None:
             p[:2] = self._hold_xy
 
+        R_des = rotation_matrix_yaw(self.yaw_des)
+        v_world = R_des @ np.array([v, 0.0, 0.0])
+
         out = []
-        for k in range(N):
-            yaw_mid = self.yaw_des + w * (k + 0.5) * dt     # midpoint integration of the arc
-            yaw_end = self.yaw_des + w * (k + 1) * dt
-            p[:2] += rotation_matrix_yaw(yaw_mid)[:2, :2] @ np.array([v, 0.0]) * dt
+        for _ in range(N):
+            p[:2] += v_world[:2] * dt                       # straight line along the held heading
             p[2] = self.z_des
 
             x = np.zeros(NX)
-            x[2] = yaw_end
+            x[2] = self.yaw_des
             x[3:6] = p
-            x[8] = w                                        # yaw rate
-            x[9:12] = rotation_matrix_yaw(yaw_end) @ np.array([v, 0.0, 0.0])
+            x[9:12] = v_world
             x[12] = s0.g
             out.append(x)
         return out
@@ -209,7 +185,6 @@ class Core:
 
         return [world_vector_to_leg_frame(c, yaw) for c in corr_w]
 
-    
     def _foot_positions_world(self, s0: State) -> np.ndarray:
         """Return FL, FR, BR, BL foot positions in world coordinates (m)."""
         R = rotation_matrix_yaw(s0.yaw)
@@ -221,13 +196,11 @@ class Core:
         ], dtype=float)
 
     def _update_mode(self, s0):
-        moving = abs(self.v_cmd_mps) > 1e-3 or abs(self.yaw_rate_cmd) > 1e-3
-        if moving:
+        if abs(self.v_cmd_mps) > 1e-3:
             self.lc.request_start()
             self.mode = Mode.WALK
         else:
             self.lc.request_stop()
-            if self.mode is Mode.WALK and self.lc.is_idle():
+            if self.mode is Mode.WALK and self.lc.idle():
                 self._hold_xy = s0.pos[:2].copy()
-                self.yaw_des = s0.yaw            # latch heading too
                 self.mode = Mode.STAND

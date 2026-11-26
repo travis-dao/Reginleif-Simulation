@@ -58,15 +58,9 @@ FEMUR_LENGTH_MM = 123.0
 TIBIA_LENGTH_MM = 160.0
 BODY_COXA_X_MM = 15.0
 
-c_max = FEMUR_LENGTH_MM + TIBIA_LENGTH_MM
-c_min = abs(FEMUR_LENGTH_MM - TIBIA_LENGTH_MM)
-
 
 class Movement:
-    STEP_LENGTH_MM = 100.0
-    STEP_HEIGHT_MM = 40.0
     SWING_DURATION_S = 0.3
-    GAP_DURATION_S = SWING_DURATION_S / 4 # 1/4 of swing duration seems to work well
 
     # indexed by (current swing leg + 1); index 0 is "no leg yet" (-1)
     ORDER_WALK_F: Tuple[int, ...] = (0, 2, 1, 3)
@@ -94,7 +88,6 @@ class Movement:
 @dataclass(frozen=True)
 class GaitTiming:
     swing_s: float
-    gap_s: float
     duty_zheta: float = 4.0
     step_length_mm: float = 100.0
     step_height_mm: float = 40.0
@@ -104,7 +97,7 @@ class GaitTiming:
     def duty(self) -> float:
         if self.duty_override is not None:
             return self.duty_override
-        return 1.0 - self.swing_s / (self.duty_zheta * (self.swing_s + self.gap_s))
+        return 1.0 - 1.0 / self.duty_zheta
 
     @property
     def period_s(self) -> float:
@@ -123,29 +116,12 @@ class Gait:
     name: str
     order: Tuple[int, ...]
     timing: GaitTiming
-    # phase offset (fraction of period) of the k-th leg in `order`
     phase_offsets: Tuple[float, ...] = (0.0, 0.25, 0.5, 0.75)
+    direction: float = +1.0          # +1 = forward (+x), -1 = backward
 
-
-_T, _G = Movement.SWING_DURATION_S, Movement.GAP_DURATION_S
-
-def run_gait(name, swing_s, duty, lag=0.25, step_len=100.0, step_h=40.0):
-    duty = max(duty, 0.45)
-    t = GaitTiming(swing_s=swing_s, gap_s=0.0,
-                   step_length_mm=step_len, step_height_mm=step_h,
-                   duty_override=duty)
-    # order is FL, BR, FR, BL, so the diagonal pairs are (FL,BR) and (FR,BL).
-    # lag = delay inside each diagonal pair: 0 = trot, 0.25 = fully sequential
-    return Gait(name, Movement.ORDER_WALK_F, t,
-                phase_offsets=(0.0, lag, 0.5, 0.5 + lag))
-
-GAIT_RUN_F = run_gait("RUN_F", swing_s=0.25, duty=0.5, lag=0.25,
-                      step_len=110, step_h=50)
-
-GAIT_WALK_F = Gait("WALK_F", Movement.ORDER_WALK_F, GaitTiming(_T,       _G,     duty_zheta=3.8))
-GAIT_WALK_B = Gait("WALK_B", Movement.ORDER_WALK_B, GaitTiming(_T * 1.3,       _G * 1.3,     duty_zheta=4.0))
-GAIT_TURN_R = Gait("TURN_R", Movement.ORDER_TURN_R, GaitTiming(_T * 1.5, _G * 4, duty_zheta=4.0))
-GAIT_TURN_L = Gait("TURN_L", Movement.ORDER_TURN_L, GaitTiming(_T * 1.5, _G * 4, duty_zheta=4.0))
+_T = Movement.SWING_DURATION_S
+GAIT_WALK_F = Gait("WALK_F", Movement.ORDER_WALK_F, GaitTiming(_T, duty_zheta=4.0))
+GAIT_WALK_B = Gait("WALK_B", Movement.ORDER_WALK_B, GaitTiming(_T * 1.5, duty_zheta=4.5, step_length_mm=80), direction=-1.0)
 
 _FOOT_NEUTRAL_MAG = Vec3(90.0, 90.0, -30.0)
 _LEG_BASE_MAG = Vec3(34.0, 43.5, 0.0)

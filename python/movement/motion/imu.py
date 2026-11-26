@@ -21,10 +21,11 @@ class ImuData:
     valid: bool = True
     rpy_rad: np.ndarray = field(default_factory=lambda: np.zeros(3))      # ZYX roll, pitch, yaw
     gyro_rad_s: np.ndarray = field(default_factory=lambda: np.zeros(3))   # BODY frame
+    accel_m_s2: np.ndarray = field(default_factory=lambda: np.array([0.0, 0.0, 9.81]))
 
 
 class Imu:
-    def __init__(self, model: mujoco.MjModel, data: mujoco.MjData, body_name: str, gyro_sensor: Optional[str] = None,):
+    def __init__(self, model: mujoco.MjModel, data: mujoco.MjData, body_name: str, gyro_sensor: Optional[str] = None, accel_sensor: Optional[str] = None):
         self.model = model
         self.data = data
 
@@ -42,6 +43,15 @@ class Imu:
                 raise ValueError(f"Gyro sensor '{gyro_sensor}' must have dimension 3")
 
             self.gyro_adr = model.sensor_adr[sid]
+
+        self.accel_adr = None
+        if accel_sensor is not None:
+            sid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SENSOR, accel_sensor)
+            if sid < 0:
+                raise ValueError(f"Sensor '{accel_sensor}' not found in model")
+            if model.sensor_dim[sid] != 3:
+                raise ValueError(f"Accel sensor '{accel_sensor}' must have dimension 3")
+            self.accel_adr = model.sensor_adr[sid]
 
         self.target_angles_deg = np.zeros(3)
         self.gyro_dps = np.zeros(3)
@@ -109,9 +119,19 @@ class Imu:
         vadr = self.model.jnt_dofadr[self.model.body_jntadr[self.body_id]]
 
         R_body = self.data.xmat[self.body_id].reshape(3, 3)          # body -> world
-        gyro_body = self.data.qvel[vadr + 3:vadr + 6].copy()    # free-joint angular vel is body-frame
+        gyro_body = self.data.qvel[vadr + 3:vadr + 6].copy()         # free-joint angular vel is body-frame
 
-        return ImuData(valid=True, rpy_rad=_rpy_zyx(R_body), gyro_rad_s=gyro_body)
+        if self.accel_adr is not None:
+            # MuJoCo <accelerometer>: specific force in the sensor frame (assumed aligned with the body)
+            accel_body = np.asarray(self.data.sensordata[self.accel_adr:self.accel_adr + 3], dtype=float).copy()
+        else:
+            # free-joint linear qacc is the world-frame acceleration of the body origin;
+            # specific force = R^T (a_world - g)
+            a_world = self.data.qacc[vadr:vadr + 3]
+            accel_body = R_body.T @ (a_world - self.model.opt.gravity)
+
+        return ImuData(valid=True, rpy_rad=_rpy_zyx(R_body),
+                    gyro_rad_s=gyro_body, accel_m_s2=accel_body)
 
 
 def _rpy_zyx(R: np.ndarray) -> np.ndarray:
