@@ -29,7 +29,7 @@ class Core:
         yaw_des: Optional[float] = None,
         solve_period_s: float = 0.02,
         gain_mm_per_n: float = 1.0,
-        max_corr_mm: float = 12.0,
+        max_corr_mm: float = 10.0,
         ramp_s: float = 1.0,
         gravity_z_mps2: float = -9.81,
     ):
@@ -105,7 +105,7 @@ class Core:
 
     # ------------------------------------------------------------------
     def _reference(self, s0: State) -> List[np.ndarray]:
-        dt, N = self.mpc.cfg.dt, self.mpc.N
+        dts, N = self.mpc.cfg.dts, self.mpc.N
         if self.mode is Mode.WALK:
             v = self.v_cmd_mps * MM
         else:
@@ -118,26 +118,27 @@ class Core:
         R_des = rotation_matrix_yaw(self.yaw_des)
         v_world = R_des @ np.array([v, 0.0, 0.0])
 
-        out = []
-        for _ in range(N):
-            p[:2] += v_world[:2] * dt                       # straight line along the held heading
+        v_now = float(R_des[:, 0] @ s0.linear_vel)        # speed along heading
+        a_max = 0.5 * self.mpc.cfg.mu * -s0.g             # stay under the friction limit
+        out, vk = [], v_now
+        for k in range(N):
+            vk += np.clip(v - vk, -a_max * dts[k], a_max * dts[k])
+            v_world = R_des @ np.array([vk, 0.0, 0.0])
+            p[:2] += v_world[:2] * dts[k]
             p[2] = self.z_des
-
             x = np.zeros(NX)
-            x[2] = self.yaw_des
-            x[3:6] = p
-            x[9:12] = v_world
-            x[12] = s0.g
+            x[2] = self.yaw_des; x[3:6] = p; x[9:12] = v_world; x[12] = s0.g
             out.append(x)
         return out
 
     def _contact_schedule(self) -> List[List[bool]]:
-        N, dt = self.mpc.N, self.mpc.cfg.dt
+        T, N = self.mpc.T, self.mpc.N
+        tmid = 0.5 * (T[:-1] + T[1:])
         contact = [[True] * NUM_LEGS for _ in range(N)]
-        for leg, t0, t1 in self.lc.swing_schedule(N * dt):
-            for k in range(N):
-                if t0 <= (k + 0.5) * dt < t1:
-                    contact[k][leg] = False
+        for leg, t0, t1 in self.lc.swing_schedule(T[-1]):
+            for i in range(N):
+                if t0 <= tmid[i] < t1:
+                    contact[i][leg] = False
         return contact
 
     def _foot_rel_pos(self, s0: State, x_ref, contact) -> List[np.ndarray]:

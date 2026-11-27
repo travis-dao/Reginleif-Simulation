@@ -120,7 +120,7 @@ class Gait:
     direction: float = +1.0          # +1 = forward (+x), -1 = backward
 
 _T = Movement.SWING_DURATION_S
-GAIT_WALK_F = Gait("WALK_F", Movement.ORDER_WALK_F, GaitTiming(_T, duty_zheta=4.0))
+GAIT_WALK_F = Gait("WALK_F", Movement.ORDER_WALK_F, GaitTiming(_T, duty_zheta=3.5))
 GAIT_WALK_B = Gait("WALK_B", Movement.ORDER_WALK_B, GaitTiming(_T * 1.5, duty_zheta=4.5, step_length_mm=80), direction=-1.0)
 
 _FOOT_NEUTRAL_MAG = Vec3(90.0, 90.0, -30.0)

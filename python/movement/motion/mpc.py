@@ -154,8 +154,8 @@ class MPCResult:
 
 @dataclass
 class MPCConfig:
-    horizon: int = 24
-    dt: float = 0.04
+    dts: np.ndarray = field(default_factory=lambda: np.array([0.02]*4 + [0.03]*4 + [0.05]*12))   # N = 20, 0.82 s total
+    horizon: float = 20
     mass: float = 12.0
     I_body: np.ndarray = field(default_factory=lambda: np.eye(3))
     mu: float = 0.4
@@ -170,6 +170,8 @@ class MPC:
     def __init__(self, cfg: Optional[MPCConfig] = None):
         self.cfg = cfg or MPCConfig()
         N = self.N = self.cfg.horizon
+        self.dts = np.asarray(cfg.dts, float)
+        self.T = np.concatenate([[0.0], np.cumsum(self.dts)])   # length N+1
 
         self.models: List[DiscreteModel] = []
 
@@ -206,7 +208,7 @@ class MPC:
         self.U_prev = np.zeros(NU * N)
 
         # W = weight, D = difference
-        self.W_smooth = 1e-2
+        self.W_smooth = 1e-3
         self.prev_contact = [True]*NUM_LEGS
         self.D = np.eye(NU * N) - np.eye(NU * N, k=-NU)   # (DU)_k = u_k - u_{k-1}
 
@@ -237,7 +239,7 @@ class MPC:
             m = Model()
             m.build_A(yaw)
             m.build_B(np.asarray(p.foot_rel_pos[i]), Model.world_inertia_inv(self.cfg.I_body, yaw), self.cfg.mass)
-            self.models.append(DiscreteModel.discretize(m, self.cfg.dt))
+            self.models.append(DiscreteModel.discretize(m, self.dts[i]))
 
     # -- 2: X = A_qp x0 + B_qp U --------------------------------------------
     def build_condensed_dynamics(self) -> None:
@@ -263,7 +265,12 @@ class MPC:
         err = self._error(p)
         Q = np.asarray(self.cfg.Q_diag, float)
         Qf = Q.copy(); Qf[[5, 11]] = 0.0          # z, vz free in flight
-        L = np.concatenate([Q if any(c) else Qf for c in p.contact])
+
+        # scale weights by step length so the cost approximates an integral
+        s = self.cfg.dts / self.cfg.dts.mean()
+        L = np.concatenate([(Q if any(c) else Qf) * s[k] for k, c in enumerate(p.contact)])
+        self.K_diag = np.repeat(self.cfg.R_weight * s, NU)
+
         BtL = self.B_qp.T * L
         self.q = 2.0 * BtL @ err
         self.H = 2.0 * BtL @ self.B_qp
@@ -278,11 +285,9 @@ class MPC:
 
     def _smooth_weights(self, p):
         w = np.zeros(NU*self.N)
-        for k in range(self.N):
-            for j in range(NUM_LEGS):
-                prev = self.prev_contact[j] if k == 0 else p.contact[k-1][j]
-                if p.contact[k][j] and prev:
-                    w[NU*k+3*j : NU*k+3*j+3] = self.W_smooth
+        for j in range(NUM_LEGS):
+            if p.contact[0][j] and self.prev_contact[j]:
+                w[3*j:3*j+3] = self.W_smooth
         return w
 
     # -- 4: lb <= C U <= ub --------------------------------------------------

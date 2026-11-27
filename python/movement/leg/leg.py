@@ -90,6 +90,7 @@ class Leg:
         p_ik = self.foot_state.target.copy()
 
         # curr = where the foot is commanded (trajectory + PID + MPC offset)
+        self.mpc_offset_lf.y = 0
         self.foot_state.curr = p_ik + self.mpc_offset_lf
 
         self._move_leg()

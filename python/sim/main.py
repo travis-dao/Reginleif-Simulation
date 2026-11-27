@@ -35,22 +35,21 @@ body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "base")
 mpc_cfg = MPCConfig(
     mass=float(model.body_subtreemass[body_id]),   # whole robot, not just the trunk
     I_body=subtree_inertia(model, data, body_id),  # base is level at t=0, so world axes == body axes
-    R_weight=1e-3,                                 # larger = smoother forces, less chatter
-    mu=0.7,                                        # keep <= foot friction in the XML
+    mu=0.4,                                        # keep <= foot friction in the XML
     # [roll pitch yaw | x y z | wx wy wz | vx vy vz | g]
-    Q_diag=np.array([1, 1, 20, 
+    Q_diag=np.array([10, 10, 20, 
                      0, 0, 50, 
-                     2, 4, 1, 
+                     1, 1, 1, 
                      50, 5, 5, 
                      0]),
+    R_weight=1e-2, # larger = smoother forces, less chatter
 )
 mpc = MPC(mpc_cfg)
 lc = LegController(model, data)
 imu = Imu(model, data, "base")
 
 # z_des is latched from the measured standing height once the robot has settled
-core = Core(mpc, lc, z_des_m=0.0, solve_period_s=mpc_cfg.dt,
-            gain_mm_per_n=cfg.MPC_GAIN, max_corr_mm=35, gravity_z_mps2=float(model.opt.gravity[2]), ramp_s=0.1)
+core = Core(mpc, lc, z_des_m=0.0, gain_mm_per_n=cfg.MPC_GAIN, max_corr_mm=35, ramp_s=0.1)
 
 # start the estimator at the known spawn pose (the estimate lives in this world frame from here on)
 _jnt = model.body_jntadr[body_id]
