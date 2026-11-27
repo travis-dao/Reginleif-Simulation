@@ -127,7 +127,8 @@ class LegController:
 
     def foot_positions_body(self) -> List[Vec3]:
         return [leg_to_body_frame(i, self.legs[i].cur_pos()) for i in range(4)]
-
+    def foot_positions_body_nominal(self) -> List[Vec3]:
+        return [leg_to_body_frame(i, self.legs[i].foot_state.target) for i in range(4)]
     def landing_targets_body(self) -> List[Vec3]:
         return [leg_to_body_frame(i, self.legs[i].nom_land_pos()) for i in range(4)]
 

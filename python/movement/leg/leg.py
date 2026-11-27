@@ -38,7 +38,7 @@ def _is_right_leg(leg_id: int) -> bool: return leg_id == 1 or leg_id == 2
 
 
 class Leg:
-    MPC_OFFSET_TAU_S = 0.04  # low-pass time constant of the MPC foot offset
+    MPC_OFFSET_TAU_S = 0.01 # low-pass time constant of the MPC foot offset
 
     def __init__(self, leg_id: int):
         neutral = Offset.neutral_foot_pos_lf[leg_id]

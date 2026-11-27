@@ -49,7 +49,7 @@ lc = LegController(model, data)
 imu = Imu(model, data, "base")
 
 # z_des is latched from the measured standing height once the robot has settled
-core = Core(mpc, lc, z_des_m=0.0, gain_mm_per_n=cfg.MPC_GAIN, max_corr_mm=35, ramp_s=0.1)
+core = Core(mpc, lc, z_des_m=0.0, gain_mm_per_n=cfg.MPC_GAIN, ramp_s=0.1)
 
 # start the estimator at the known spawn pose (the estimate lives in this world frame from here on)
 _jnt = model.body_jntadr[body_id]
@@ -88,6 +88,7 @@ def sim():
                 swing_leg=Movement.index_name(lc.swing_leg),
                 gait=lc._gait.name,
                 vel_cmd=core.v_cmd_mps * 1e3,
+                vel_est=core.estimator.state.linear_vel[0] * 1e3,
                 leg_duty=lc._gait.timing.duty,
                 run_enabled=lc.run_enabled
             )

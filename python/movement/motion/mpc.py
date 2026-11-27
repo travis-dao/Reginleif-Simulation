@@ -159,8 +159,8 @@ class MPCConfig:
     mass: float = 12.0
     I_body: np.ndarray = field(default_factory=lambda: np.eye(3))
     mu: float = 0.4
-    f_min: float = 5.0
-    f_max: float = 250.0
+    f_min: float = 0.0
+    f_max: float = 40.0
     # [roll pitch yaw | x y z | wx wy wz | vx vy vz | g]
     Q_diag: np.ndarray = field(default_factory=lambda: np.ones(NX))
     R_weight: float = 1e-4
@@ -277,17 +277,19 @@ class MPC:
         self.H[np.diag_indices_from(self.H)] += 2.0 * self.K_diag
 
         d0 = np.zeros(NU * self.N)
-        d0[:NU] = self.U_prev[:NU]           # last applied u0 (zero if that leg was in swing)
+        d0[:NU] = self.U_prev[:NU] # last applied u0 (zero if that leg was in swing)
         w = self._smooth_weights(p)
-        DtW = self.D.T * w                     # D' diag(w)
+        DtW = self.D.T * w # D' diag(w)
         self.H += 2.0 * DtW @ self.D
         self.q -= 2.0 * DtW @ d0
 
     def _smooth_weights(self, p):
         w = np.zeros(NU*self.N)
-        for j in range(NUM_LEGS):
-            if p.contact[0][j] and self.prev_contact[j]:
-                w[3*j:3*j+3] = self.W_smooth
+        for k in range(self.N):
+            for j in range(NUM_LEGS):
+                prev = self.prev_contact[j] if k == 0 else p.contact[k-1][j]
+                if p.contact[k][j] and prev:
+                    w[NU*k+3*j : NU*k+3*j+3] = self.W_smooth
         return w
 
     # -- 4: lb <= C U <= ub --------------------------------------------------
@@ -308,7 +310,7 @@ class MPC:
             P.data = Px
             self._solver = osqp.OSQP()
             self._solver.setup(P=P, q=self.q, A=self._C_sp, l=self.lb, u=self.ub,
-                               verbose=False, warm_start=True,
+                               verbose=False, warm_start=True, adaptive_rho=True,
                                eps_abs=1e-4, eps_rel=1e-4, max_iter=4000, polish=False)
             self.solver_initialized = True
         else:

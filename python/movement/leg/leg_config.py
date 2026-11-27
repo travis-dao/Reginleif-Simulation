@@ -60,7 +60,7 @@ BODY_COXA_X_MM = 15.0
 
 
 class Movement:
-    SWING_DURATION_S = 0.3
+    SWING_DURATION_S = 0.25
 
     # indexed by (current swing leg + 1); index 0 is "no leg yet" (-1)
     ORDER_WALK_F: Tuple[int, ...] = (0, 2, 1, 3)
@@ -89,8 +89,8 @@ class Movement:
 class GaitTiming:
     swing_s: float
     duty_zheta: float = 4.0
-    step_length_mm: float = 100.0
-    step_height_mm: float = 40.0
+    step_length_mm: float = 110.0
+    step_height_mm: float = 30.0
     duty_override: Optional[float] = None
 
     @property
@@ -120,10 +120,10 @@ class Gait:
     direction: float = +1.0          # +1 = forward (+x), -1 = backward
 
 _T = Movement.SWING_DURATION_S
-GAIT_WALK_F = Gait("WALK_F", Movement.ORDER_WALK_F, GaitTiming(_T, duty_zheta=3.5))
-GAIT_WALK_B = Gait("WALK_B", Movement.ORDER_WALK_B, GaitTiming(_T * 1.5, duty_zheta=4.5, step_length_mm=80), direction=-1.0)
+GAIT_WALK_F = Gait("WALK_F", Movement.ORDER_WALK_F, GaitTiming(_T, duty_zheta=4.0))
+GAIT_WALK_B = Gait("WALK_B", Movement.ORDER_WALK_B, GaitTiming(_T * 1.25, duty_zheta=5.0, step_length_mm=80), direction=-1.0)
 
-_FOOT_NEUTRAL_MAG = Vec3(90.0, 90.0, -30.0)
+_FOOT_NEUTRAL_MAG = Vec3(75.0, 90.0, -30.0)
 _LEG_BASE_MAG = Vec3(34.0, 43.5, 0.0)
 _QUADRANT_SIGN = (
     Vec3(+1, +1, +1),  # Front Left

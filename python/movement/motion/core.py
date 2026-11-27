@@ -6,11 +6,7 @@ import numpy as np
 from movement.leg.leg_config import Vec3
 from movement.leg.leg_controller import LegController
 from movement.motion.mpc import MPC, MPCProblem, MPCResult, State, NX, NUM_LEGS
-from movement.motion.util import (
-    foot_forces_to_positions,
-    rotation_matrix_yaw,
-    world_vector_to_leg_frame,
-)
+from movement.motion.util import foot_forces_to_positions, rotation_matrix_yaw, world_vector_to_leg_frame
 from movement.motion.state_estimator import StateEstimator, EstimatorConfig, ImuData
 
 MM = 1e-3
@@ -74,7 +70,7 @@ class Core:
 
     def _foot_rel_body_m(self) -> np.ndarray:
         """Foot positions in the body frame, (4, 3) in metres (the estimator's FK input)."""
-        return np.array([_v_m(p) for p in self.lc.foot_positions_body()])
+        return np.array([_v_m(p) for p in self.lc.foot_positions_body_nominal()])
 
     # ------------------------------------------------------------------
     def step(self, dt_s: float) -> Optional[MPCResult]:
@@ -98,9 +94,10 @@ class Core:
         res = self.mpc.solve(MPCProblem(x0=s0, x_ref=x_ref, foot_rel_pos=feet, contact=contact))
         self.last_result = res
         if res.success:  # on failure keep the last good offsets
-            # Convert forces to foot position corrections
-            self._offsets = self._to_offsets(s0, res.u0.foot_ground_force, contact[0], s0.yaw)
-        self.lc.apply_mpc_corrections(self._offsets)
+            self._offsets = self._to_offsets(s0, res.u0.foot_ground_force, contact[0], s0.yaw) # force -> pos offset
+
+        if self.mode is not Mode.STAND:
+            self.lc.apply_mpc_corrections(self._offsets)
         return res
 
     # ------------------------------------------------------------------
